@@ -18,8 +18,8 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+/lib/
+/lib64/
 parts/
 sdist/
 var/
@@ -189,3 +189,20 @@ fp-info-cache
 *.csv
 
 src/Controller - Pi/db/BajaCloud.db
+
+
+# --- dependencies and build output (install / build locally instead) ---
+node_modules/
+backend/bin/
+backend/obj/
+*.lscache
+frontend/dist/
+
+# --- local runtime files ---
+*.pid
+*.log
+
+# --- AI agent notes (local only) ---
+CLAUDE.md
+AGENTS.md
+.claude/
