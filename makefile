@@ -1,4 +1,4 @@
-.PHONY: clean up down reset watch build buildMock buildReal upReal upMock no_cache
+.PHONY: clean up down reset watch build buildMock buildReal upReal upMock no_cache ui ui-stop
 
 clean:
 	docker container prune -f
@@ -60,3 +60,11 @@ reset:
 no_cache:
 	 docker build --no-cache
 
+
+# frontend only, no docker/keycloak/backend; logs in ui.log
+ui:
+	cd frontend && (VITE_NO_AUTH=1 ./node_modules/.bin/vite --host > ../ui.log 2>&1 & echo $$! > ../ui.pid)
+	@echo "UI at http://localhost:5173 (make ui-stop to stop)"
+
+ui-stop:
+	-kill $$(cat ui.pid) && rm ui.pid

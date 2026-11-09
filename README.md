@@ -24,6 +24,13 @@ IAM (Identity & Access Management)
 * Dedicated Image: Standalone container to handle authentication and authorization for whole stack
 * Keycloak Database: Temporary H2 database (Migration to other database needed!)
 
+# Frontend only (no Docker)
+The telemetry dashboard (`/telemetry-v2`, the default page) can run on its own with fake data:
+1. `cd frontend && npm ci` (first time only)
+2. `make ui` from the root folder (stop with `make ui-stop`); this skips the Keycloak login
+3. `python3 tools/mock_server.py` for simulated car data
+4. Open http://localhost:5173/
+
 # Setup 
 1. Clone Repository 
 2. Change into root folder "2025-2026-webapp"

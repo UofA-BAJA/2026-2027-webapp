@@ -1,0 +1,320 @@
+.tv2 {
+  --tv2-bg: #000000;
+  --tv2-toolbar: #0a0a0a;
+  --tv2-tile: #222222;
+  --tv2-tile-border: #2e2e2e;
+  --tv2-divider: #262626;
+  --tv2-control-border: #3a3a3a;
+  --tv2-add-border: #4a4a4a;
+  --tv2-add-grid: #3a3a3a;
+  --tv2-text: #e6e6e6;
+  --tv2-value: #ffffff;
+  --tv2-label: #9a9a9a;
+  --tv2-nav-near: #8a8a8a;
+  --tv2-nav-far: #6e6e6e;
+  --tv2-active: #ffffff;
+  --tv2-active-weight: 400; /* pivot active name */
+  --tv2-value-weight: 400; /* number tile values */
+  --tv2-ease: cubic-bezier(0.1, 0.9, 0.2, 1);
+  --tv2-gap: 8px;
+  --tv2-pad: 16px;
+  --tv2-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  container-type: inline-size; /* grid rows size off this width */
+  min-height: 100vh;
+  background: var(--tv2-bg);
+  color: var(--tv2-text);
+  font-family: "Segoe UI", system-ui, -apple-system, Helvetica, Arial, sans-serif;
+  overflow-x: hidden;
+}
+.tv2.light {
+  --tv2-bg: #f2f2f2;
+  --tv2-toolbar: #e8e8e8;
+  --tv2-tile: #ffffff;
+  --tv2-tile-border: #dddddd;
+  --tv2-divider: #dddddd;
+  --tv2-control-border: #cccccc;
+  --tv2-add-border: #b0b0b0;
+  --tv2-add-grid: #d0d0d0;
+  --tv2-text: #1a1a1a;
+  --tv2-value: #000000;
+  --tv2-label: #666666;
+  --tv2-nav-near: #777777;
+  --tv2-nav-far: #a0a0a0;
+  --tv2-active: #000000;
+}
+/* reset our own buttons only (CommandSender keeps its styling); :where = zero specificity so class rules win */
+.tv2 :where(button:not(.command-sender *)) {
+  all: unset;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+.tv2 button:focus-visible { outline: 2px solid var(--tv2-active); outline-offset: 2px; }
+
+/* ---- top bar: logo | pivot (truly centered) | controls ---- */
+.tv2-top {
+  height: 64px;
+  padding: 0 16px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  border-bottom: 1px solid var(--tv2-divider);
+  box-sizing: border-box;
+}
+.tv2-logo { width: 36px; height: 36px; object-fit: cover; }
+.tv2-pivot {
+  display: flex;
+  align-items: baseline;
+  gap: 22px;
+  white-space: nowrap;
+  animation: tv2-pivot-in 320ms var(--tv2-ease) both;
+}
+.tv2-pivot.fwd { --tv2-from: 80px; }
+.tv2-pivot.back { --tv2-from: -80px; }
+@keyframes tv2-pivot-in {
+  from { transform: translateX(var(--tv2-from)); opacity: 0; }
+}
+.tv2 .tv2-name {
+  font-weight: 300;
+  line-height: 1;
+  transition: transform 120ms;
+}
+.tv2 .tv2-name.active {
+  font-size: 36px;
+  font-weight: var(--tv2-active-weight);
+  color: var(--tv2-active);
+  text-shadow: 0 4px 16px rgba(0, 0, 0, 0.95);
+}
+.tv2 .tv2-name.near {
+  font-size: 24px;
+  color: var(--tv2-nav-near);
+  text-shadow: 0 0 3px rgba(138, 138, 138, 0.45), 0 3px 8px rgba(0, 0, 0, 0.9);
+}
+.tv2 .tv2-name.far {
+  font-size: 22px;
+  color: var(--tv2-nav-far);
+  text-shadow: 0 0 6px rgba(110, 110, 110, 0.7), 0 3px 10px rgba(0, 0, 0, 0.9);
+}
+.tv2 .tv2-name:active { transform: scale(0.97); }
+
+.tv2-right {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--tv2-label);
+}
+.tv2-radio { position: relative; }
+.tv2 .tv2-signal { display: flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }
+.tv2-bars { display: flex; align-items: flex-end; gap: 2px; }
+.tv2-bars i { width: 3px; background: var(--tv2-control-border); }
+.tv2-bars i.on { background: var(--tv2-text); }
+.tv2-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 10;
+  padding: 12px 14px;
+  background: var(--tv2-toolbar);
+  border: 1px solid var(--tv2-control-border);
+  border-radius: 3px;
+}
+.tv2-popover dl { margin: 0 0 8px; display: grid; grid-template-columns: auto auto; gap: 6px 16px; white-space: nowrap; }
+.tv2-popover dt { color: var(--tv2-label); }
+.tv2-popover dd { margin: 0; color: var(--tv2-text); }
+.tv2-popover .command-sender { background: none; padding: 0; font-size: 14px; }
+.tv2 .tv2-icon-btn,
+.tv2 .tv2-text-btn {
+  height: 32px;
+  border: 1px solid var(--tv2-control-border);
+  border-radius: 3px;
+  color: var(--tv2-text);
+}
+.tv2 .tv2-icon-btn { width: 32px; display: grid; place-items: center; }
+.tv2 .tv2-text-btn { padding: 0 12px; display: inline-flex; align-items: center; font-size: 13px; font-weight: 400; text-decoration: none; box-sizing: border-box; }
+
+/* ---- customize toolbar ---- */
+.tv2-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  background: var(--tv2-toolbar);
+  border-bottom: 1px solid var(--tv2-divider);
+  font-size: 13px;
+  color: var(--tv2-label);
+}
+
+/* ---- grid: react-grid-layout, 6 columns, row height = column width (small 1x1, medium 2x1, large 2x2) ---- */
+.tv2-grid { display: block; }
+.tv2 .react-grid-item { transition: transform 200ms var(--tv2-ease); }
+.tv2 .react-grid-item.react-draggable-dragging { transition: none; z-index: 3; }
+.tv2-editing .react-grid-item:not([class*="static"]) .tv2-tile { cursor: grab; }
+.tv2-editing .react-draggable-dragging .tv2-tile { cursor: grabbing; transform: scale(1.03); opacity: 1; }
+/* drop target: dashed cell outline instead of the library's red box */
+.tv2 .react-grid-item.react-grid-placeholder {
+  background: none;
+  border: 1px dashed var(--tv2-add-border);
+  border-radius: 3px;
+  opacity: 1;
+}
+
+/* ---- tiles ---- */
+.tv2-tile {
+  height: 100%;
+  overflow: hidden;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+  background: var(--tv2-tile);
+  border: 1px solid var(--tv2-tile-border);
+  border-radius: 3px;
+  box-sizing: border-box;
+  transition: transform 120ms;
+}
+.tv2-tile:active {
+  transform: perspective(600px) rotateX(var(--tv2-tilt-x, 0deg)) rotateY(var(--tv2-tilt-y, 0deg)) scale(0.97);
+}
+/* staggered entry; fill-mode backwards so :active's scale still works afterwards */
+.tv2-in { animation: tv2-tile-in 420ms var(--tv2-ease) backwards; }
+@keyframes tv2-tile-in {
+  from { transform: perspective(900px) translateY(28px) rotateX(-14deg); opacity: 0; }
+}
+/* controls wrap under the label when the tile is too narrow for both */
+.tv2-tile-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; min-height: 26px; }
+.tv2-label { white-space: nowrap; }
+.tv2-label {
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: lowercase;
+  color: var(--tv2-label);
+}
+.tv2-ranges { display: flex; gap: 4px; margin-left: auto; font-size: 12px; }
+.tv2 .tv2-ranges button {
+  padding: 2px 8px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: var(--tv2-label);
+}
+.tv2 .tv2-ranges button.on { border-color: var(--tv2-control-border); color: var(--tv2-text); }
+.tv2-reading { margin-top: auto; }
+.tv2-value-row { display: flex; align-items: baseline; gap: 8px; white-space: nowrap; }
+.tv2-value {
+  font-family: var(--tv2-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--tv2-value-weight);
+  font-size: 64px;
+  line-height: 1;
+  color: var(--tv2-value);
+}
+.tv2-unit { font-size: 18px; color: var(--tv2-label); }
+.tv2-limits { margin-top: 6px; font-size: 12px; color: var(--tv2-label); }
+.tv2-chart { flex: 1; min-width: 0; min-height: 0; }
+/* medium: number bottom-left, small line chart filling the right */
+.tv2-medium { flex: 1; min-height: 0; display: flex; align-items: stretch; gap: 12px; }
+.tv2-medium .tv2-reading { flex: none; align-self: flex-end; }
+/* min-width: when a small tile grows to medium the chart mounts before the grid widens the tile */
+.tv2-medium .tv2-chart { min-width: 80px; }
+/* per-tile number picker (customize mode, multi-channel tiles) */
+.tv2 .tv2-pick {
+  align-self: flex-start;
+  margin-bottom: 6px;
+  padding: 2px 6px;
+  background: var(--tv2-bg);
+  color: var(--tv2-text);
+  border: 1px solid var(--tv2-control-border);
+  border-radius: 3px;
+  font: inherit;
+  font-size: 12px;
+}
+.tv2-unpicked .tv2-add-pick { justify-content: flex-start; padding: 0; overflow: auto; }
+
+/* ---- window controls: round Metro app-bar buttons, top-right of each tile ---- */
+.tv2-controls { display: flex; gap: 6px; margin-left: auto; }
+.tv2 .tv2-controls button {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--tv2-text);
+  border-radius: 50%;
+  background: var(--tv2-bg);
+  color: var(--tv2-text);
+  transition: transform 120ms;
+}
+/* pressed = inverted, like the WP app bar */
+.tv2 .tv2-controls button:active:not([aria-disabled="true"]) {
+  background: var(--tv2-text);
+  color: var(--tv2-bg);
+  transform: scale(0.92);
+}
+.tv2 .tv2-controls button[aria-disabled="true"] { opacity: 0.35; cursor: default; }
+
+/* edit mode, WP start-screen style: tiles step back and dim, the one you're on pops forward */
+.tv2-editing .tv2-tile {
+  transform: scale(0.94);
+  opacity: 0.55;
+  transition: transform 200ms var(--tv2-ease), opacity 200ms;
+}
+.tv2-editing .tv2-tile:hover,
+.tv2-editing .tv2-tile:focus-within { transform: none; opacity: 1; }
+
+
+/* ---- empty "+ add tile" slot ---- */
+.tv2-add {
+  height: 100%;
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: #000;
+  border: 1px dashed var(--tv2-add-border);
+  border-radius: 3px;
+}
+/* "#" grid: 6px lines every 36px, a line through the tile's centre, blurred on its own layer */
+.tv2-add-grid {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, transparent 15px, var(--tv2-add-grid) 15px 21px, transparent 21px),
+    linear-gradient(transparent 15px, var(--tv2-add-grid) 15px 21px, transparent 21px);
+  background-size: 36px 36px;
+  background-position: center;
+  filter: blur(3px);
+  pointer-events: none;
+}
+.tv2 .tv2-add-btn {
+  position: relative;
+  padding: 6px 12px;
+  background: #000;
+  font-size: 14px;
+  color: var(--tv2-text);
+}
+.tv2-add-pick {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px;
+}
+.tv2 .tv2-add-pick button {
+  padding: 4px 10px;
+  background: #000;
+  border: 1px solid var(--tv2-control-border);
+  border-radius: 3px;
+  font-size: 13px;
+  color: var(--tv2-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tv2-pivot,
+  .tv2-in { animation: none; }
+  .tv2 .tv2-name,
+  .tv2-tile,
+  .tv2-editing .tv2-tile { transition: none; }
+  .tv2-tile:active { transform: none; }
+}
+.tv2-ranges + .tv2-controls { margin-left: 0; }

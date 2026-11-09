@@ -15,7 +15,8 @@ export type DataTypeKey =
   | "brake_pressure_rear"
   | "shock_displacement_front_left"
   | "shock_displacement_front_right"
-  | "shock_displacement_rear"
+  | "shock_displacement_rear_left"
+  | "shock_displacement_rear_right"
   | "cvt_temperature"
   | "gps_longitude"
   | "gps_latitude"
@@ -43,7 +44,8 @@ export const DATA_TYPE_MAP: Record<DataTypeKey, DataTypeConfig> = {
   brake_pressure_rear:            { label: "Brake Pressure Rear"            },
   shock_displacement_front_left:  { label: "Shock Displacement Front Left"  },
   shock_displacement_front_right: { label: "Shock Displacement Front Right" },
-  shock_displacement_rear:        { label: "Shock Displacement Rear"        },
+  shock_displacement_rear_left:   { label: "Shock Displacement Rear Left"   },
+  shock_displacement_rear_right:  { label: "Shock Displacement Rear Right"  },
   cvt_temperature:                { label: "CVT Temperature"                },
   gps_longitude:                  { label: "GPS Longitude"                  },
   gps_latitude:                   { label: "GPS Latitude"                   },

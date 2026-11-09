@@ -1,26 +1,23 @@
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import "./App.css";
-import Home from "./Components/Home";
-import Contact from "./Components/Contact";
 import Nave from "./Components/Nave";
-import About from "./Components/About";
-import TestSecure from "./Components/TestSecure";
 import Convert from "./Components/Convert";
 import Telemetry from "./Components/Telemetry";
+import TelemetryV2 from "./telemetry-v2/TelemetryV2";
 import { DarkModeProvider } from "./context/DarkModeContaxt";
 
 function App() {
+  // v2 is full-bleed with its own top bar
+  const v2 = useLocation().pathname === "/telemetry-v2";
   return (
     <div className="App">
       <DarkModeProvider>
-        <Nave />
+        {!v2 && <Nave />}
         <Routes>
-          <Route path="/secure-test" element={<TestSecure />} />
-          <Route path="/" element={<Home />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/convert" element={<Convert />} />
           <Route path="/telemetry" element={<Telemetry />} />
+          <Route path="/telemetry-v2" element={<TelemetryV2 />} />
+          <Route path="/convert" element={<Convert />} />
+          <Route path="*" element={<Navigate to="/telemetry-v2" replace />} />
         </Routes>
       </DarkModeProvider>
     </div>

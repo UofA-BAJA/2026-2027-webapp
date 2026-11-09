@@ -28,27 +28,21 @@ function Nave() {
       {/* Logo */}
       <div style={{ position: "absolute", left: "50px", top: "10px" }}>
         <a
-          href="https://github.com/UofA-BAJA/2025-2026-firmware/tree/main"
+          href="https://github.com/UofA-BAJA/2026-2027-webapp"
           target="_blank"
           rel="noreferrer"
         >
           <img src="/baja_logo.jpg" className="logo" alt="Baja logo" />
         </a>
       </div>
-      <Link to="/" style={ankerStyle}>
-        Home
+      <Link to="/telemetry-v2" style={ankerStyle}>
+        Telemetry
       </Link>
-      <Link to="/about" style={ankerStyle}>
-        About
-      </Link>
-      <Link to="/contact" style={ankerStyle}>
-        Contact
+      <Link to="/telemetry" style={ankerStyle}>
+        Classic
       </Link>
       <Link to="/convert" style={ankerStyle}>
         CSVConvert
-      </Link>
-      <Link to="/telemetry" style={ankerStyle}>
-        Telemetry
       </Link>
 
       <button
