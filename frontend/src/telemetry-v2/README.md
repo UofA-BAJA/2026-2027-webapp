@@ -16,7 +16,7 @@ Most changes are **data changes in `config/`**. You shouldn't need to read compo
 | `grid/` | `TileGrid` (packing, drag-to-reorder, fullscreen overlay) and `AddSlot`. |
 | `radio/` | `Radio` (the signal readout), `RadioPanel`, `CommandButton`, `DataTypePicker`, `sendCommand.ts`. |
 | `hooks/` | `useStream` (the live data), `useLayouts` (saved tile orders), `useResize`. |
-| `lib/` | Plain logic with self-checks: `limitState.ts`, `layout.ts` (sizes, packer, validation), `stream.ts`, `format.ts`, `map.ts`, `dataSummary.ts`, `storage.ts`. |
+| `lib/` | Plain logic with self-checks: `limitState.ts`, `layout.ts` (sizes, packer, validation), `axisRange.ts`, `headerFit.ts`, `systems.ts`, `stream.ts`, `format.ts`, `map.ts`, `dataSummary.ts`, `storage.ts`. |
 | `TelemetryV2.tsx` | Only puts the pieces together and holds page-wide state. |
 
 ## Recipes
@@ -34,8 +34,8 @@ Set the channel's `axis` in `config/channels.ts`: `{ auto: true }` fits the data
 
 ### Add a channel
 1. Add an entry to `CHANNELS` in `config/channels.ts`. `keys` are the field names in the live stream; see `FRAME_FIELDS` in `tools/radio_to_json.py`. `source` is the firmware DataType it comes from. Fill in `label`, `unit`, `decimals` and `axis`, plus `scale` for a unit conversion.
-2. Add its id to exactly one group in `SYSTEMS` (same file), so it shows in the "pick a channel" list.
-3. Run the self-check (below). It fails if a channel is missing from `SYSTEMS` or a preset names an unknown channel.
+2. Set its `system` (for example `"Drivetrain"`). That puts it in the "pick a channel" list under that group; a new name makes a new group. Groups and channels are listed in the order they appear in `CHANNELS`.
+3. Run the self-check (below). It fails if a preset names an unknown channel.
 
 ### Add or reorder a preset
 Edit `PRESETS` in `config/presets.ts`. Each preset is an ordered list of `{ channel, size }`:
@@ -44,8 +44,12 @@ Edit `PRESETS` in `config/presets.ts`. Each preset is an ordered list of `{ chan
 
 The grid fills tiles in order, left to right, top to bottom, at any window width. A viewer who customized a preset keeps their own version, saved in their browser's localStorage (`tv2-layouts-v4`). Clearing the site data brings the default back; there's no reset button.
 
+### Rename a preset or add a header control
+Just do it. The header measures the logo, the preset names and the controls, and picks the richest layout that fits (five names centered, three centered, three next to the logo, or only the active name). There are no breakpoints to update.
+
 ### Change a color
-- **Page, tiles, header, radio panel:** change the role in `styles/tokens.css`, for example `--alarm`, `--data-problem` or `--tile`. The light theme overrides some of them at the bottom of the file.
+- **Page, tiles, header, radio panel:** change the role in `styles/tokens.css`, for example `--alarm`, `--data-problem` or `--tile`. The light theme overrides some of them at the bottom of the file. The header ridges use `--ridge-back` / `--ridge-front` too.
+- **Sizes that code also needs** (page gutter, grid gap, radio panel width, unit font): `config/theme.ts`. It hands them to CSS, so there's no second copy to keep in sync.
 - **Chart lines, axes, ticks, tooltips:** these are drawn on a canvas, so they're in `CHART` in `config/theme.ts`.
 - Red (`--alarm`) means the car has a problem, and blue (`--data-problem`) means the data has a problem. Don't use them for decoration.
 
@@ -61,6 +65,8 @@ Run from `frontend/`:
 node --experimental-strip-types src/telemetry-v2/lib/layout.check.ts   # packer, presets, limits, saved-layout validation
 node --experimental-strip-types src/telemetry-v2/lib/radio.check.ts    # radio config and sendCommand
 node --experimental-strip-types src/telemetry-v2/lib/map.check.ts      # GPS track maths
+node --experimental-strip-types src/telemetry-v2/lib/axisRange.check.ts   # round ticks, grow/shrink of chart ranges
+node --experimental-strip-types src/telemetry-v2/lib/headerFit.check.ts   # which header layout fits
 ```
 
 `lib/` and `config/` import each other with `.ts` extensions so these run in plain Node. Keep that when you add imports there.

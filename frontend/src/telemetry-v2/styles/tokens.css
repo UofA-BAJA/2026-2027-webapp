@@ -1,6 +1,7 @@
 /* Every color, font size and spacing value for /telemetry-v2, named by role.
    Change a value here, not in the other stylesheets: they only use these names.
-   Canvas charts can't read CSS, so their colors live in config/theme.ts. */
+   Canvas charts can't read CSS, so their colors live in config/theme.ts. So do the few values code needs too
+   (page gutter --page-pad, radio panel --panel-width, unit font --fs-unit): theme.ts sets them as CSS variables. */
 .tv2 {
   /* ---- colors with a meaning (never use them for decoration) ---- */
   --alarm: #ab0520; /* Arizona Red: the CAR has a problem (outline meter, OVER LIMIT tile, emergency stop) */
@@ -37,8 +38,10 @@
   /* ---- header (the same in both themes) ---- */
   --brand-sky-top: #aa0722;
   --brand-sky-bottom: #8f0c2a;
-  --ridge-back: #6d0b26; /* also baked into assets/header-ridge.svg */
-  --ridge-front: #1d1f46; /* also baked into assets/header-ridge.svg */
+  --ridge-back: #6d0b26; /* back ridge (header/Ridges.tsx), top of its gradient */
+  --ridge-back-low: #5a0a22; /* back ridge, bottom of its gradient */
+  --ridge-front: #1d1f46; /* front ridge, top of its gradient */
+  --ridge-front-low: #121a42; /* front ridge, bottom of its gradient */
   --on-brand: #ffffff; /* active pivot name, signal readout, active time window */
   --on-brand-near: rgba(255, 255, 255, 0.75); /* pivot names next to the active one */
   --on-brand-far: rgba(255, 255, 255, 0.5); /* outer pivot names */
@@ -62,7 +65,6 @@
   --fs-small: 12px; /* the smallest size for text people read */
   --fs-ui: 13px; /* toolbar, text buttons, channel picker buttons, link status */
   --fs-body: 14px; /* tile labels and status, radio panel text */
-  --fs-unit: 18px; /* unit after the big number; tiles/parts/Reading.tsx assumes about 13px per character */
   --fs-value-min: 12px; /* the big number shrinks between these two to fit its tile */
   --fs-value-max: 64px;
   --value-weight: 400;
@@ -80,8 +82,6 @@
 
   /* ---- spacing and sizes ---- */
   --header-h: 92px; /* the radio panel and the fullscreen overlay sit just under it */
-  --page-pad: 16px; /* gutter around the grid and in the header; must match GRID.pad in config/theme.ts */
-  --grid-gap: 8px; /* between tiles; must match GRID.gap in config/theme.ts */
   --tile-pad: 14px;
   --radius: 3px;
   --control-size: 28px; /* round tile buttons */
@@ -90,7 +90,6 @@
   --logo-top: 5px;
   --logo-h: 54px;
   --ridge-h: 34px;
-  --panel-width: 420px; /* must match RADIO_PANEL_WIDTH in config/theme.ts */
   --command-h: 72px;
   --estop-h: 56px;
   --limit-bar-h: 4px;

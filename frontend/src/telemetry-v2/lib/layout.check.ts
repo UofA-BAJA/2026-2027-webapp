@@ -1,6 +1,7 @@
 // Self-check for layout.ts and limitState.ts. Run from frontend/: node --experimental-strip-types src/telemetry-v2/lib/layout.check.ts
 import assert from "node:assert/strict";
-import { CHANNELS, SYSTEMS } from "../config/channels.ts";
+import { CHANNELS } from "../config/channels.ts";
+import { SYSTEMS } from "./systems.ts";
 import { PRESETS } from "../config/presets.ts";
 import { colsFor, pack, presetTiles, validTiles } from "./layout.ts";
 import { channelLimit, limitState } from "./limitState.ts";
@@ -30,9 +31,10 @@ for (const cols of [2, 4, 6])
 
 // config: every preset tile is a valid saved tile (known channel, a real size, the map large-only)
 for (const p of PRESETS) assert.ok(validTiles(presetTiles(p)), `${p.name} preset is valid`);
-// config: every channel is in exactly one picker group
-const grouped = SYSTEMS.flatMap((s) => s.channels);
-assert.deepEqual([...grouped].sort(), Object.keys(CHANNELS).sort(), "every channel in exactly one SYSTEMS group");
+// the picker groups come from each channel's system: same groups and order as the old hand-kept list
+assert.deepEqual(SYSTEMS.map((s) => s.name), ["Drivetrain", "Suspension", "Brakes", "IMU", "GPS", "Errors"]);
+assert.deepEqual(SYSTEMS.flatMap((s) => s.channels).sort(), Object.keys(CHANNELS).sort(), "every channel in exactly one group");
+assert.deepEqual(SYSTEMS[0].channels, ["speed", "distance", "motor_rpm", "wheel_rpm", "cvt_temp"]);
 
 // dense: a small tile fills the hole a medium tile leaves behind
 const d = pack([{ w: 1, h: 1 }, { w: 2, h: 1 }, { w: 1, h: 1 }], 2);

@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { Link } from "react-router-dom";
 import { COMMANDS, DEFAULT_DATA_TYPES, ESTOP_HOLD_MS, FREQ_DEFAULT, FREQ_MAX, FREQ_MIN, FREQ_STEP } from "../config/radio";
-import { RADIO_PANEL_WIDTH } from "../config/theme";
+import { GRID, RADIO_PANEL_WIDTH } from "../config/theme";
 import { clock, mss } from "../lib/format";
 import type { Stream } from "../lib/stream";
 import CommandButton from "./CommandButton";
@@ -57,8 +57,8 @@ export default function RadioPanel({ s, live, dbm, perSec, trigger, open, onClos
     if (!open) return;
     const place = () => {
       const b = trigger.current!.getBoundingClientRect();
-      const w = Math.min(RADIO_PANEL_WIDTH, innerWidth - 32);
-      setRight(Math.min(Math.max(16, innerWidth - b.right), innerWidth - 16 - w));
+      const w = Math.min(RADIO_PANEL_WIDTH, innerWidth - 2 * GRID.pad);
+      setRight(Math.min(Math.max(GRID.pad, innerWidth - b.right), innerWidth - GRID.pad - w));
     };
     place();
     const close = (e: Event) => {

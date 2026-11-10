@@ -1,4 +1,5 @@
-import { CHANNELS, SYSTEMS } from "../config/channels";
+import { CHANNELS } from "../config/channels";
+import { SYSTEMS } from "../lib/systems";
 import type { Tile } from "../lib/layout";
 import TileControls from "./parts/TileControls";
 import type { TileActions } from "./types";

@@ -1,6 +1,6 @@
 // Look-and-feel values that code needs (ECharts is drawn on a canvas, so CSS can't style it). Data only.
-// Every other color, font size and spacing lives in ../styles/tokens.css. A value is defined in one place only;
-// where both sides need the same number it says so.
+// Every other color, font size and spacing lives in ../styles/tokens.css. Each value is defined in one place only:
+// the few that both code and CSS need are defined here and handed to CSS as variables (CSS_VARS, set on the page root).
 
 export const CHART = {
   lines: ["#81CEEB", "#e8a33d", "#e6e6e6", "#c06ce0"], // series colors in order; the first (Arizona light blue) is every chart's main line
@@ -35,7 +35,7 @@ export const CHART = {
   },
 };
 
-// Grid sizing used by the tile packer. Must match the grid gaps in tokens.css (--grid-gap, --page-pad).
+// Grid sizing used by the tile packer; `pad` is also the page gutter in CSS (--page-pad).
 export const GRID = {
   gap: 8, // px between tiles
   pad: 16, // px around the grid
@@ -47,8 +47,16 @@ export const GRID = {
   ],
 };
 
-export const RADIO_PANEL_WIDTH = 420; // px; must match --panel-width in tokens.css
-export const LOGO_SWAP_BELOW = 1100; // px window width: the wordmark becomes the cactus mark below this (header.css uses the same number)
+export const RADIO_PANEL_WIDTH = 420; // px, the radio panel (most of a narrow window gets less)
+export const UNIT_FONT = 18; // px, the unit after the big number; the number shrinks to leave room for it
+export const LOGO_SWAP_BELOW = 1100; // px window width: the wordmark becomes the cactus mark below this
 export const EASTER_EGG_HOLD_MS = 800; // hold the logo this long to play the video
 export const SWIPE_MIN = 20; // px of horizontal wheel/trackpad movement that counts as a preset swipe
 export const SWIPE_COOLDOWN_MS = 600; // one preset change per swipe
+
+// The values above that CSS also uses, as CSS variables (set on the page root by TelemetryV2.tsx).
+export const CSS_VARS = {
+  "--page-pad": `${GRID.pad}px`,
+  "--panel-width": `${RADIO_PANEL_WIDTH}px`,
+  "--fs-unit": `${UNIT_FONT}px`,
+};

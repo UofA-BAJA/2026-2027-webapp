@@ -6,16 +6,25 @@
   height: var(--header-h);
   padding: 6px var(--page-pad) 30px; /* 6 + 56px band + 30 = 92; the band ends just under the ridge's highest peak */
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); /* minmax: wide controls can't push the pivot off center */
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); /* centered: minmax, so wide controls can't push the pivot off center */
   grid-template-rows: 56px;
+  column-gap: 16px; /* the least space between logo, pivot and controls (header/Header.tsx reads it when choosing a layout) */
   align-items: center;
   background: linear-gradient(180deg, var(--brand-sky-top) 0%, var(--brand-sky-bottom) 100%);
   box-sizing: border-box;
   /* no overflow: hidden here: the ridge and the logo already sit inside the box */
 }
-/* team mark: the wordmark, swapped for the cactus-only mark below 1100px (<picture> in header/Logo.tsx) */
-/* the <picture> wrapper is what's positioned: Chrome still gives a display:contents picture a grid cell, which pushed the pivot onto the ridge */
-.tv2-top > picture { position: absolute; left: var(--logo-left); top: var(--logo-top); z-index: 0; }
+/* team mark: the wordmark, swapped for the cactus-only mark on narrow windows (<picture> in header/Logo.tsx).
+   It's the header's first grid item; the margins put it at --logo-left / --logo-top from the header's corner. */
+.tv2-top > picture {
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
+  align-self: start;
+  position: relative;
+  z-index: 0; /* under the ridge */
+  margin: calc(var(--logo-top) - 6px) 0 0 calc(var(--logo-left) - var(--page-pad));
+}
 .tv2-logo { height: var(--logo-h); width: auto; display: block; }
 .tv2-top > picture { touch-action: none; -webkit-touch-callout: none; user-select: none; } /* long press = easter egg, not text select or image menu */
 /* easter egg video: over everything, click/Esc/end closes it */
@@ -26,6 +35,7 @@
 .tv2-top > nav, .tv2-top > .tv2-right { position: relative; z-index: 2; }
 .tv2-pivot {
   grid-column: 2;
+  grid-row: 1;
   display: flex;
   align-items: baseline;
   gap: 22px;
@@ -46,23 +56,17 @@
 .tv2 .tv2-name.near { font-size: var(--fs-pivot-near); color: var(--on-brand-near); }
 .tv2 .tv2-name.far { font-size: var(--fs-pivot-far); color: var(--on-brand-far); }
 .tv2 .tv2-name:active { transform: scale(0.97); }
-/* Breakpoints measured from the widest pivot (any preset active) against the controls ("−100 dBm radio ▾" … customize),
-   with a 12px gap and ~20px spare: 5 centered names need 1488px, 3 centered names 1302px, 3 left-aligned names 949px.
-   Re-measure if a preset name or a header control changes. Swipe and the arrow keys still reach hidden presets. */
-/* drop the outer pivot names so the controls fit */
-@media (width < 1510px) { .tv2 .tv2-name.far { display: none; } }
-/* the centered pivot would hit the controls: pivot moves left, controls stay right */
-@media (width < 1320px) {
-  /* left padding clears the logo: 18px + 157px wordmark (54px tall) + 16px gap */
-  .tv2-top { grid-template-columns: auto minmax(0, 1fr); padding-left: 191px; }
-  .tv2-pivot { grid-column: 1; }
-}
-/* the cactus mark is 36px wide at 54px tall: 18 + 36 + 16 (1100 = LOGO_SWAP_BELOW in config/theme.ts) */
-@media (width < 1100px) { .tv2-top { padding-left: 70px; } }
-/* half-screen: only the active name */
-@media (width < 970px) { .tv2 .tv2-name.near { display: none; } }
+/* The header picks its layout by measuring itself (data-fit, set by header/Header.tsx; see lib/headerFit.ts):
+   center5 / center3: the pivot centered with five / three names; left3 / left1: the pivot just after the logo.
+   Hidden names leave the layout but stay measurable. Swipe and the arrow keys still reach every preset. */
+.tv2-top[data-fit^="left"] { grid-template-columns: auto auto minmax(0, 1fr); }
+.tv2-top[data-fit^="left"] .tv2-pivot { justify-self: start; }
+.tv2-top:not([data-fit="center5"]) .tv2-name.far,
+.tv2-top[data-fit="left1"] .tv2-name.near { position: absolute; visibility: hidden; pointer-events: none; }
 
 .tv2-right {
+  grid-column: 3;
+  grid-row: 1;
   justify-self: end;
   display: flex;
   align-items: center;

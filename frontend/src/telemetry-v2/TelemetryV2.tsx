@@ -2,7 +2,7 @@
 // What to change where: see README.md in this folder.
 import { useEffect, useRef, useState } from "react";
 import { DEFAULT_TIME_WINDOW, PRESETS } from "./config/presets";
-import { SWIPE_COOLDOWN_MS, SWIPE_MIN } from "./config/theme";
+import { CSS_VARS, SWIPE_COOLDOWN_MS, SWIPE_MIN } from "./config/theme";
 import TileGrid from "./grid/TileGrid";
 import EasterEgg from "./header/EasterEgg";
 import Header from "./header/Header";
@@ -71,7 +71,7 @@ export default function TelemetryV2() {
   };
 
   return (
-    <div className={`tv2${light ? " light" : ""}`}>
+    <div className={`tv2${light ? " light" : ""}`} style={CSS_VARS as React.CSSProperties}>
       <Header
         onLogoHold={() => setEgg(true)}
         active={active}
