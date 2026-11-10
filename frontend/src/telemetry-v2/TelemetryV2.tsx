@@ -1,11 +1,11 @@
 import * as echarts from "echarts";
 import ReactECharts from "echarts-for-react";
 import { useEffect, useRef, useState, type RefObject } from "react";
-import ReactGridLayout, { useContainerWidth, type Layout } from "react-grid-layout";
+import ReactGridLayout, { useContainerWidth, verticalCompactor, type Layout } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import { Link } from "react-router-dom";
 import CommandSender from "../Components/CommandSender";
-import { CHANNELS, PRESETS, SIZES, SYSTEMS, colsFor, pack, seriesLabel, sizeIndex, type Channel, type ChannelId, type Tile } from "./presets";
+import { CHANNELS, PRESETS, SIZES, SYSTEMS, colsFor, pack, seriesLabel, sizeIndex, validTiles, type Channel, type ChannelId, type Tile } from "./presets";
 import { fitTrack, scaleBar, type Pt } from "./map";
 import ridge from "./assets/header-ridge.svg";
 import "./telemetry-v2.css";
@@ -171,12 +171,12 @@ function TileControls({ tile, a }: { tile: Tile; a: TileActions }) {
   return (
     <div className="tv2-controls">
       {a.full ? (
-        <Ctl glyph="exitFullscreen" label="Restore" onClick={() => a.onFull(false)} />
+        <Ctl glyph="exitFullscreen" label="Exit fullscreen" onClick={() => a.onFull(false)} />
       ) : a.customizing ? (
         <Ctl glyph="delete" label="Delete" onClick={a.onDelete} />
       ) : (
         <>
-          {tile.kind === "channel" && <Ctl glyph="size" label={`Make ${SIZES[(size + 1) % 3].name}`} onClick={a.onResize} />}
+          {tile.kind === "channel" && <Ctl glyph="size" label={`Change size (now: ${SIZES[size].name})`} onClick={a.onResize} />}
           <Ctl glyph="fullscreen" label="Fullscreen" onClick={() => a.onFull(true)} />
         </>
       )}
@@ -415,16 +415,18 @@ export default function TelemetryV2() {
   const [light, setLight] = useState(() => load<string>("tv2-theme", "dark") === "light");
   const [customizing, setCustomizing] = useState(false);
   // edited tile order per preset (per-viewer, browser only); presets.ts holds the defaults
-  // v3 stored x/y per tile; its row-by-row order becomes the v4 order
-  const [layouts, setLayouts] = useState<Record<string, PlacedTile[]>>(() =>
-    load("tv2-layouts-v4", null) ??
-    Object.fromEntries(
-      Object.entries(load<Record<string, (PlacedTile & { x?: number; y?: number })[]>>("tv2-layouts-v3", {})).map(([k, ts]) => [
-        k,
-        [...ts].sort((a, b) => (a.y ?? 0) - (b.y ?? 0) || (a.x ?? 0) - (b.x ?? 0)).map(({ x: _x, y: _y, ...t }) => t),
-      ]),
-    ),
-  );
+  // v3 stored x/y per tile; its row-by-row order becomes the v4 order. An invalid preset layout falls back to the default.
+  const [layouts, setLayouts] = useState<Record<string, PlacedTile[]>>(() => {
+    const saved =
+      load<Record<string, PlacedTile[]> | null>("tv2-layouts-v4", null) ??
+      Object.fromEntries(
+        Object.entries(load<Record<string, (PlacedTile & { x?: number; y?: number })[]>>("tv2-layouts-v3", {})).map(([k, ts]) => [
+          k,
+          Array.isArray(ts) ? [...ts].sort((a, b) => (a.y ?? 0) - (b.y ?? 0) || (a.x ?? 0) - (b.x ?? 0)).map(({ x: _x, y: _y, ...t }) => t) : ts,
+        ]),
+      );
+    return Object.fromEntries(Object.entries(saved && typeof saved === "object" ? saved : {}).filter(([, ts]) => validTiles(ts)));
+  });
   const [justAdded, setJustAdded] = useState<string>();
   // tile shown fullscreen over the grid; never touches the layout, cleared on preset switch
   const [fullId, setFullId] = useState<string>();
@@ -446,6 +448,7 @@ export default function TelemetryV2() {
   const { width, containerRef, mounted } = useContainerWidth();
   const tiles: PlacedTile[] = layouts[preset.name] ?? preset.tiles.map((t, i) => ({ ...t, id: `${preset.name}-${i}` }));
   const cols = colsFor(width);
+  const col = (width - 2 * 16 - (cols - 1) * 8) / cols; // row height = column width
   // the "+ add tile" slot packs last, after every tile
   const placed = pack([...tiles, ...(customizing ? [{ id: "add", w: 1, h: 1 }] : [])], cols);
   const setTiles = (next: PlacedTile[]) => {
@@ -462,12 +465,25 @@ export default function TelemetryV2() {
   };
   const update = (id: string, f: (t: PlacedTile) => PlacedTile) => setTiles(tiles.map((t) => (t.id === id ? f(t) : t)));
   const resize = (id: string) => update(id, (t) => ({ ...t, ...SIZES[(sizeIndex(t) + 1) % SIZES.length] }));
-  // drag-and-drop in customize mode: where things landed (row by row) becomes the new order
-  const onDragStop = (l: Layout) => {
-    const at = new Map(l.map((it) => [it.i, it.y * 100 + it.x]));
-    setTiles([...tiles].sort((a, b) => at.get(a.id)! - at.get(b.id)!));
+  // drag-and-drop in customize mode changes only the order, then pack() reflows. The dragged tile goes where
+  // pack() puts it exactly on the drop cell; if no order can (dense packing backfills a hole), it goes before the
+  // tile it was dropped on. The drop cell comes from where it was let go (RGL's own item is already compacted).
+  const onDragStop = (_l: Layout, _old: unknown, item: { i: string } | null, _p: unknown, _e: unknown, el: HTMLElement | null) => {
+    const moved = tiles.find((t) => t.id === item?.i);
+    const grid = containerRef.current?.getBoundingClientRect();
+    if (!moved || !el || !grid) return;
+    const r = el.getBoundingClientRect();
+    const drop = { x: Math.round((r.left - grid.left - 16) / (col + 8)), y: Math.round((r.top - grid.top - 16) / (col + 8)) };
+    const rest = tiles.filter((t) => t !== moved);
+    const insert = (k: number) => [...rest.slice(0, k), moved, ...rest.slice(k)];
+    const exact = rest.concat(moved).map((_, k) => insert(k)).find((o) => {
+      const p = pack(o, cols).find((t) => t.id === moved.id)!;
+      return p.x === drop.x && p.y === drop.y;
+    });
+    const before = new Map(placed.map((p) => [p.id, p]));
+    const k = rest.findIndex((t) => { const p = before.get(t.id)!; return p.y > drop.y || (p.y === drop.y && p.x >= drop.x); });
+    setTiles(exact ?? insert(k < 0 ? rest.length : k));
   };
-  const col = (width - 2 * 16 - (cols - 1) * 8) / cols;
   const gridLayout: Layout = placed.map((t) => ({ i: t.id, x: t.x, y: t.y, w: t.w, h: t.h, ...(t.id === "add" && { isDraggable: false }) }));
   const fullTile = tiles.find((t) => t.id === fullId);
   const range = timeRange(s, secs);
@@ -558,6 +574,8 @@ export default function TelemetryV2() {
             gridConfig={{ cols: cols, rowHeight: col, margin: [8, 8], containerPadding: [16, 16] }}
             dragConfig={{ enabled: customizing, cancel: "button, select" }}
             resizeConfig={{ enabled: false }}
+            // positions come from pack(); vertical compaction, no collision blocking and no overlap, so RGL never refuses them
+            compactor={verticalCompactor}
             onDragStop={onDragStop}
           >
             {tiles.map((t, i) => (

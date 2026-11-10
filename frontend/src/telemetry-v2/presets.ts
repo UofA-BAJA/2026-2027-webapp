@@ -164,11 +164,26 @@ export function pack<T extends { w: number; h: number }>(tiles: T[], cols: numbe
     return true;
   };
   return tiles.map((t) => {
+    const w = Math.min(t.w, cols); // never refuse a size: a tile wider than the grid is clamped to it
     for (let y = 0; ; y++)
-      for (let x = 0; x + t.w <= cols; x++)
-        if (fits(x, y, t.w, t.h)) {
-          for (let i = x; i < x + t.w; i++) for (let j = y; j < y + t.h; j++) taken.add(`${i},${j}`);
-          return { ...t, x, y };
+      for (let x = 0; x + w <= cols; x++)
+        if (fits(x, y, w, t.h)) {
+          for (let i = x; i < x + w; i++) for (let j = y; j < y + t.h; j++) taken.add(`${i},${j}`);
+          return { ...t, w, x, y };
         }
+  });
+}
+
+// A saved layout (from localStorage, so untrusted) is usable only if every tile is a known shape and channel.
+// Anything else makes that preset fall back to its default.
+export function validTiles(ts: unknown): boolean {
+  if (!Array.isArray(ts)) return false;
+  const ids = new Set<string>();
+  return ts.every((t) => {
+    if (!t || typeof t.id !== "string" || ids.has(t.id)) return false;
+    ids.add(t.id);
+    const shape = SIZES.some((s) => s.w === t.w && s.h === t.h);
+    const chans = Array.isArray(t.channels) && t.channels.every((c: unknown) => typeof c === "string" && c in CHANNELS);
+    return shape && chans && (t.kind === "channel" || (t.kind === "xy" && t.w === 2 && t.h === 2)); // the GPS map is large-only
   });
 }

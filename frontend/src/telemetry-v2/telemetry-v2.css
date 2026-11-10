@@ -201,7 +201,7 @@
   from { transform: perspective(900px) translateY(28px) rotateX(-14deg); opacity: 0; }
 }
 /* controls wrap under the label when the tile is too narrow for both */
-.tv2-tile-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; min-height: 26px; }
+.tv2-tile-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; min-height: 28px; }
 .tv2-label { white-space: nowrap; }
 .tv2-label {
   font-size: 14px;
@@ -279,8 +279,8 @@
 /* ---- window controls: round Metro app-bar buttons, top-right of each tile ---- */
 .tv2-controls { display: flex; gap: 6px; margin-left: auto; }
 .tv2 .tv2-controls button {
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   display: grid;
   place-items: center;
   border: 2px solid var(--tv2-text);
