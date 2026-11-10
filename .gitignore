@@ -20,7 +20,8 @@ eggs/
 .eggs/
 /lib/
 /lib64/
-parts/
+# root only (a Python build dir); unanchored, it also hid frontend/src/telemetry-v2/tiles/parts/
+/parts/
 sdist/
 var/
 wheels/
