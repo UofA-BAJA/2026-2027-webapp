@@ -87,9 +87,9 @@ function timeRange(s: Stream, secs: number): [number, number] {
 }
 
 const AXIS = {
-  axisLabel: { color: "#9a9a9a", fontSize: 12 },
+  axisLabel: { color: "#9a9a9a", fontSize: 12, margin: 11 }, // clears the 5px outside ticks
   axisLine: { show: true, lineStyle: { color: "#444444", width: 1 } },
-  axisTick: { show: false },
+  axisTick: { show: true, inside: false, length: 5, lineStyle: { color: "#6e6e6e" } },
   splitLine: { show: false },
   scale: true,
 };
@@ -104,7 +104,10 @@ const clock = (ms: number) =>
 const tsClock = (s: Stream, ts: number) => clock(s.lastAt - ((s.lastTs ?? ts) - ts) * 1000);
 const mss = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")}`;
 
-// compact = the small chart inside a medium tile: lines only, no legend or axes
+// minor ticks for large charts only; splitNumber = segments per major interval
+const minor = (splitNumber: number) => ({ minorTick: { show: true, length: 3, splitNumber, lineStyle: { color: "#454545" } } });
+
+// compact = the small chart inside a medium tile: lines, axis lines and major ticks; no legend or labels
 function chartOption(tile: Tile, s: Stream, [from, to]: [number, number], tooltip: boolean, compact = false) {
   const chs: Channel[] = tile.channels.map((c) => CHANNELS[c]);
   const dual = chs.length > 1;
@@ -126,7 +129,7 @@ function chartOption(tile: Tile, s: Stream, [from, to]: [number, number], toolti
     color: SERIES_COLORS,
     textStyle: { fontFamily: "inherit" },
     grid: compact
-      ? { left: 0, right: 0, top: 4, bottom: 4 }
+      ? { left: 6, right: dual ? 6 : 0, top: 4, bottom: 6 } // room for the outside ticks
       : { left: 0, right: 0, top: legend ? 30 : 8, bottom: 0, containLabel: true },
     legend: legend
       ? { left: 0, top: 0, icon: "rect", itemWidth: 10, itemHeight: 2, textStyle: { color: "#9a9a9a", fontSize: 12 } }
@@ -147,13 +150,20 @@ function chartOption(tile: Tile, s: Stream, [from, to]: [number, number], toolti
     // every chart gets the exact page window so the x axes (and linked cursors) line up
     xAxis: {
       type: "value",
-      ...(compact ? { show: false } : { ...AXIS, axisLabel: { ...AXIS.axisLabel, show: false } }),
+      ...AXIS,
+      axisLabel: { ...AXIS.axisLabel, show: false },
+      ...(compact ? {} : minor(3)),
       axisPointer: { label: { formatter: ({ value }: { value: number }) => tsClock(s, value) } }, // tooltip header
       scale: true,
       min: from,
       max: to,
     },
-    yAxis: chs.slice(0, 2).map((_, i) => (compact ? { type: "value", show: false, scale: true } : { type: "value", ...AXIS, position: i ? "right" : "left" })),
+    yAxis: chs.slice(0, 2).map((_, i) => ({
+      type: "value",
+      ...AXIS,
+      position: i ? "right" : "left",
+      ...(compact ? { axisLabel: { show: false } } : minor(2)),
+    })),
     series,
   };
 }
