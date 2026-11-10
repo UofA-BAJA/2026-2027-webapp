@@ -84,6 +84,10 @@
 .tv2-unit { font-size: var(--fs-unit); color: var(--muted); }
 /* charts fill the tile body; the canvas is absolute inside, so its size never feeds back into the box */
 .tv2-chart { flex: 1 1 0; min-width: 0; min-height: 0; position: relative; }
+/* Only the chart under the mouse shows its tooltip box. The linked charts still get the cursor line. Done in CSS (:hover)
+   because toggling ECharts' showContent lags a render: jumping between charts left the old box up. !important beats
+   the inline display ECharts sets on the box. */
+.tv2-chart:not(:hover) .tv2-tooltip { display: none !important; }
 
 /* ---- GPS track map (SVG; no axes, equal aspect) ---- */
 .tv2-map { flex: 1 1 0; min-width: 0; min-height: 0; position: relative; overflow: hidden; }

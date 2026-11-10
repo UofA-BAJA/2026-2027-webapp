@@ -3,7 +3,7 @@ import { STALE_MS } from "../config/radio";
 import type { Stream } from "../lib/stream";
 import RadioPanel from "./RadioPanel";
 
-// The signal readout in the header (bars + dBm); it toggles the radio panel hanging underneath.
+// The radio button in the header ("[bars] −70 dBm radio ▾"); it toggles the radio panel hanging underneath.
 export default function Radio({ s }: { s: Stream }) {
   const [open, setOpen] = useState(false);
   const btn = useRef<HTMLButtonElement>(null);
@@ -21,7 +21,7 @@ export default function Radio({ s }: { s: Stream }) {
         <span className="tv2-bars" aria-hidden>
           {[1, 2, 3, 4].map((b) => <i key={b} className={b <= bars ? "on" : ""} style={{ height: 3 + b * 3 }} />)}
         </span>
-        {live ? `${dbm} dBm` : "no signal"}
+        {live ? `${dbm} dBm` : "no signal"} radio ▾
       </button>
       {/* always mounted so its settings survive closing; it draws nothing while closed */}
       <RadioPanel s={s} live={live} dbm={dbm} perSec={rate.current.perSec} trigger={btn} open={open} onClose={() => setOpen(false)} />

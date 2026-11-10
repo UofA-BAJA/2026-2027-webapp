@@ -8,7 +8,7 @@ export type Channel = {
   keys: string[]; // raw field names in the live stream (FRAME_FIELDS in tools/radio_to_json.py); several keys = one line each
   scale?: number; // raw value × scale = shown value (unit conversion); leave out for 1
   decimals: number; // digits after the decimal point in the big number
-  axis: { auto: true } | { min: number; max: number }; // chart y axis: auto fits the data, or a fixed min/max
+  axis: { auto: true } | { min: number; max: number }; // chart y axis: auto fits the data; min/max is the smallest range shown (it still grows if the data goes past it)
   warnAt?: number; // the red outline meter starts here ("warming", then "near limit")
   redline?: number; // at or over this the whole tile turns red: "OVER LIMIT"
   idle?: number; // motor rpm only: the limit bar starts here
@@ -24,7 +24,7 @@ export const CHANNELS = {
     keys: ["car_state_speed"],
     scale: 2.23694, // m/s → mph. TODO: confirm with team that the car sends m/s
     decimals: 1,
-    axis: { auto: true },
+    axis: { min: 0, max: 60 }, // TODO: confirm with team (temporary range)
   },
   distance: {
     label: "distance",
@@ -41,7 +41,7 @@ export const CHANNELS = {
     source: "CVT_TEMPERATURE",
     keys: ["cvt_temperature"],
     decimals: 0,
-    axis: { auto: true },
+    axis: { min: 0, max: 150 }, // TODO: confirm with team (temporary range)
     warnAt: 100, // confirmed by the team
     redline: 120, // confirmed by the team
   },
@@ -51,7 +51,7 @@ export const CHANNELS = {
     source: "MOTOR_RPM",
     keys: ["motor_rpm"],
     decimals: 0,
-    axis: { auto: true },
+    axis: { min: 0, max: 4000 }, // TODO: confirm with team (temporary range)
     idle: 1750, // confirmed by the team
     governor: 3800, // confirmed by the team
   },

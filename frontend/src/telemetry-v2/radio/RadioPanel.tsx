@@ -10,7 +10,7 @@ import { sendCommand } from "./sendCommand";
 
 type Props = { s: Stream; live: boolean; dbm: string; perSec: number; trigger: RefObject<HTMLButtonElement | null>; open: boolean; onClose: () => void };
 
-// The radio panel hanging from the signal readout. Every send goes through sendCommand() and shows its result.
+// The radio panel hanging from the signal readout. Every send goes through sendCommand() and shows "sending…", then its result.
 export default function RadioPanel({ s, live, dbm, perSec, trigger, open, onClose }: Props) {
   const [tenths, setTenths] = useState(Math.round(FREQ_DEFAULT * 10)); // MHz × 10, so 0.1 steps never drift
   const [types, setTypes] = useState<number[]>(DEFAULT_DATA_TYPES);
@@ -26,8 +26,9 @@ export default function RadioPanel({ s, live, dbm, perSec, trigger, open, onClos
   const now = Date.now();
   const age = s.lastAt ? now - s.lastAt : Infinity;
 
-  const send = (where: string, label: string, code: number, payload?: number | number[]) => {
-    const r = sendCommand(code, payload);
+  const send = async (where: string, label: string, code: number, payload?: number | number[]) => {
+    setResult({ where, text: `${label} (${code}) · sending…` });
+    const r = await sendCommand(code, payload);
     setResult({ where, text: `${label} (${code}) · ${r.ok ? "sent" : `not sent: ${r.reason}`} · ${clock(Date.now())}` });
   };
   const shown = (where: string) => result?.where === where && <p className="tv2-rp-result" role="status">{result.text}</p>;
@@ -74,7 +75,7 @@ export default function RadioPanel({ s, live, dbm, perSec, trigger, open, onClos
   }, [open]);
 
   if (!open) return null;
-  const cmd = (label: string, code: number, effect: string, onClick = () => send("cmd", label, code)) => (
+  const cmd = (label: string, code: number, effect: string, onClick: () => unknown = () => send("cmd", label, code)) => (
     <CommandButton label={label} code={code} effect={effect} disabled={!live} onClick={onClick} />
   );
   const step = (d: number) => setTenths((f) => Math.min(FREQ_MAX * 10, Math.max(FREQ_MIN * 10, f + d * Math.round(FREQ_STEP * 10))));

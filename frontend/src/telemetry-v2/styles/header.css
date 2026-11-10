@@ -46,18 +46,21 @@
 .tv2 .tv2-name.near { font-size: var(--fs-pivot-near); color: var(--on-brand-near); }
 .tv2 .tv2-name.far { font-size: var(--fs-pivot-far); color: var(--on-brand-far); }
 .tv2 .tv2-name:active { transform: scale(0.97); }
-/* narrow screens: drop the outer pivot names so the top-bar controls fit (swipe/arrows still reach them) */
-@media (max-width: 1280px) { .tv2 .tv2-name.far { display: none; } }
-/* below 1280 the centered pivot would hit the controls: pivot moves left, controls stay right */
-@media (width < 1280px) {
+/* Breakpoints measured from the widest pivot (any preset active) against the controls ("−100 dBm radio ▾" … customize),
+   with a 12px gap and ~20px spare: 5 centered names need 1488px, 3 centered names 1302px, 3 left-aligned names 949px.
+   Re-measure if a preset name or a header control changes. Swipe and the arrow keys still reach hidden presets. */
+/* drop the outer pivot names so the controls fit */
+@media (width < 1510px) { .tv2 .tv2-name.far { display: none; } }
+/* the centered pivot would hit the controls: pivot moves left, controls stay right */
+@media (width < 1320px) {
   /* left padding clears the logo: 18px + 157px wordmark (54px tall) + 16px gap */
   .tv2-top { grid-template-columns: auto minmax(0, 1fr); padding-left: 191px; }
   .tv2-pivot { grid-column: 1; }
 }
 /* the cactus mark is 36px wide at 54px tall: 18 + 36 + 16 (1100 = LOGO_SWAP_BELOW in config/theme.ts) */
 @media (width < 1100px) { .tv2-top { padding-left: 70px; } }
-/* half-screen: only the active name (swipe/arrows still reach the rest) */
-@media (width < 900px) { .tv2 .tv2-name.near { display: none; } }
+/* half-screen: only the active name */
+@media (width < 970px) { .tv2 .tv2-name.near { display: none; } }
 
 .tv2-right {
   justify-self: end;
@@ -69,7 +72,8 @@
 }
 .tv2-radio { position: relative; }
 /* header controls: white on the red, no borders or boxes */
-.tv2 .tv2-top .tv2-signal { color: var(--on-brand); }
+.tv2 .tv2-top .tv2-signal { color: var(--on-brand-control); } /* "−70 dBm radio ▾": 80% white, full white on hover */
+.tv2 .tv2-top .tv2-signal:hover { color: var(--on-brand); }
 .tv2 .tv2-top .tv2-text-btn, .tv2 .tv2-top .tv2-icon-btn { border: none; color: var(--on-brand-control); }
 /* borderless, so less padding: at 1440px the controls must clear the 5-name pivot */
 .tv2 .tv2-top .tv2-text-btn { padding: 0 6px; }

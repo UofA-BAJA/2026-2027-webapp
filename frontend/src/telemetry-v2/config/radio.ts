@@ -4,6 +4,8 @@
 // Change them there first, then here.
 
 export const STREAM_URL = "http://localhost:8000/stream"; // live data (Server-Sent Events) from tools/radio_to_json.py or the mock server
+export const RADIO_COMMAND_URL = "/api/radio/command"; // pit → car commands: POST { id, payload }; no backend route exists yet
+export const SEND_TIMEOUT_MS = 5000; // a send with no answer by then counts as "not connected to car"
 export const STALE_MS = 3000; // no new value for this long = "no data" on a tile, "silent" in the radio panel
 
 export const FREQ_MIN = 902; // MHz, bottom of the radio band

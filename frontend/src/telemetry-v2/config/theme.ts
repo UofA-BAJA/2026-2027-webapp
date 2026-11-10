@@ -4,19 +4,35 @@
 
 export const CHART = {
   lines: ["#81CEEB", "#e8a33d", "#e6e6e6", "#c06ce0"], // series colors in order; the first (Arizona light blue) is every chart's main line
-  axisLabel: "#9a9a9a", // y axis numbers and legend text
-  axisLine: "#444444", // the axis lines themselves
-  tick: "#6e6e6e", // major ticks
+  axisLabel: "#8a8a8a", // tick numbers, time labels and legend text
+  unit: "#6e6e6e", // the unit above the top y tick
+  axisLine: "#3a3a3a", // the axis lines themselves
+  gridH: "#2e2e2e", // horizontal gridlines (large and medium)
+  gridV: "#262626", // vertical gridlines (large only)
+  tick: "#6e6e6e", // major ticks, at every label
   minorTick: "#454545", // minor ticks (large charts only)
+  limit: "#AB0520", // dashed redline / governor line (Arizona Red: a car problem)
+  limitOnAlarm: "rgba(255,255,255,0.7)", // the same line on a red OVER LIMIT tile, where red would vanish
+  rangeNote: "#8a8a8a", // "above range" next to the unit when the data pushed the axis past its configured range
+  hoverLine: "rgba(255,255,255,0.4)", // vertical cursor line
   tooltipBg: "#000000", // hover box
   tooltipBorder: "#3a3a3a",
   tooltipText: "#e6e6e6",
-  fontSize: 12, // axis, legend and tooltip text (never below 12)
+  fontSize: 11, // px, tick labels, unit and legend
+  tooltipFontSize: 12, // px
   tickLength: 5, // px, major ticks, outside the axis line
   minorTickLength: 3, // px
-  labelMargin: 11, // px between the axis and its numbers (clears the ticks)
-  minorSplitTime: 3, // minor ticks per major step on the time axis (10 s when the step is 30 s)
-  minorSplitValue: 2, // minor ticks per major step on the y axis
+  labelMargin: 11, // px between the axis and its labels
+  minorTimeStep: 10, // s between minor ticks on the time axis
+  minorTimeMax: 60, // most minor time ticks on one chart (long windows space them out instead)
+  hoverDot: 8, // px, the dot on the hovered point; its 2px ring is the tile's own color
+  autoShrinkMs: 3000, // an auto y range grows at once but waits this long before shrinking
+  // tick counts per chart size: y = value ticks, x = time labels (first with am/pm, last "now")
+  ticks: {
+    medium: { y: 3, x: 3 },
+    large: { y: 5, x: 5 },
+    full: { y: 7, x: 7 }, // fullscreen: the large rules with more ticks
+  },
 };
 
 // Grid sizing used by the tile packer. Must match the grid gaps in tokens.css (--grid-gap, --page-pad).
