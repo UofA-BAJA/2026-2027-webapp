@@ -1,0 +1,195 @@
+/* ---- tiles ---- */
+.tv2-tile {
+  container-type: inline-size; /* number font sizes off the tile width (cqw) */
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: var(--tile-pad);
+  background: var(--tile);
+  border: 1px solid var(--tile-border);
+  border-radius: var(--radius);
+  box-sizing: border-box;
+  transition: transform 120ms;
+}
+.tv2-tile:active {
+  transform: perspective(600px) rotateX(var(--tv2-tilt-x, 0deg)) rotateY(var(--tv2-tilt-y, 0deg)) scale(0.97);
+}
+/* staggered entry; fill-mode backwards so :active's scale still works afterwards */
+.tv2-in { animation: tv2-tile-in 420ms var(--ease) backwards; }
+@keyframes tv2-tile-in {
+  from { transform: perspective(900px) translateY(28px) rotateX(-14deg); opacity: 0; }
+}
+/* only the controls sit at the top; the label is at the bottom */
+.tv2-tile-head { display: flex; justify-content: flex-end; margin-bottom: 8px; min-height: var(--control-size); }
+/* Windows Phone style: label bottom-left, directly under the big number */
+.tv2-foot { margin-top: 6px; }
+.tv2-foot-row { display: flex; align-items: baseline; gap: 8px; }
+.tv2-label {
+  font-size: var(--fs-body);
+  text-transform: lowercase;
+  color: var(--tile-label);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.tv2-status { margin-left: auto; font-size: var(--fs-body); white-space: nowrap; color: var(--alarm); }
+.tv2-status.strong { font-weight: 700; }
+/* limit bar: always shown for channels with known limits, at every size */
+.tv2-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: var(--fs-small); color: var(--tile-label); font-variant-numeric: tabular-nums; }
+.tv2-bar-track { flex: 1; height: var(--limit-bar-h); background: var(--limit-track); }
+.tv2-bar-track i { display: block; height: 100%; background: var(--limit-fill); transition: width 300ms var(--ease); }
+.tv2-warn .tv2-bar-track i { background: var(--alarm); }
+
+/* approaching a limit: the outline is a meter (SVG rect, pathLength 100, starts top-left, runs clockwise) */
+.tv2-meter { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.tv2-meter rect {
+  x: calc(var(--meter-w) / 2);
+  y: calc(var(--meter-w) / 2);
+  width: calc(100% - var(--meter-w));
+  height: calc(100% - var(--meter-w));
+  rx: 2px;
+  fill: none;
+  stroke-width: var(--meter-w);
+}
+.tv2-meter-track { stroke: var(--alarm-track); }
+.tv2-meter-fill { stroke: var(--alarm); transition: stroke-dasharray 300ms var(--ease); }
+/* over the limit: the whole tile goes red, white text, one 300ms pulse when it first crosses */
+.tv2 .tv2-tile.tv2-over { background: var(--alarm); border-color: var(--alarm); }
+.tv2-over .tv2-value, .tv2-over .tv2-unit, .tv2-over .tv2-label, .tv2-over .tv2-status, .tv2-over .tv2-bar { color: var(--on-alarm); }
+.tv2-over .tv2-bar-track { background: var(--on-alarm-track); }
+.tv2-over .tv2-bar-track i { background: var(--on-alarm); }
+.tv2-over::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: var(--pulse); opacity: 0; animation: tv2-pulse 300ms ease-out; }
+@keyframes tv2-pulse { from { opacity: 0.35; } }
+/* no data: dark tile, blue inset edge, number replaced by a dash */
+.tv2 .tv2-tile.tv2-stale { background: var(--stale-tile); box-shadow: inset 0 0 0 var(--stale-edge) var(--data-problem); }
+.tv2-stale .tv2-value { color: var(--stale-value); }
+.tv2-stale .tv2-status { color: var(--tile-label); }
+
+/* the big number */
+.tv2-reading { margin-top: auto; }
+.tv2-value-row { display: flex; align-items: baseline; gap: 8px; white-space: nowrap; }
+.tv2-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--value-weight);
+  /* fit the tile: tile width (cqw) minus the fixed-size unit, split over the digits (~0.62em each in mono) */
+  font-size: clamp(var(--fs-value-min), calc((100cqw - var(--tv2-unit, 0px)) / (var(--tv2-chars, 4) * 0.62)), var(--fs-value-max));
+  line-height: 1;
+  color: var(--value);
+}
+.tv2-unit { font-size: var(--fs-unit); color: var(--muted); }
+/* charts fill the tile body; the canvas is absolute inside, so its size never feeds back into the box */
+.tv2-chart { flex: 1 1 0; min-width: 0; min-height: 0; position: relative; }
+
+/* ---- GPS track map (SVG; no axes, equal aspect) ---- */
+.tv2-map { flex: 1 1 0; min-width: 0; min-height: 0; position: relative; overflow: hidden; }
+.tv2-map svg { position: absolute; inset: 0; }
+.tv2-map-path { fill: none; stroke: var(--map-line); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.tv2-map-start { fill: none; stroke: var(--map-line); stroke-width: 1.5; }
+.tv2-map-car { fill: var(--map-car); filter: var(--map-car-glow); }
+.tv2-map-info {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  font-size: var(--fs-small);
+  line-height: 1.4;
+  color: var(--map-line);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+.tv2-map-scale { display: flex; align-items: flex-end; gap: 6px; margin-bottom: 2px; }
+.tv2-map-scale > div { height: 4px; border: 1px solid var(--map-line); border-top: 0; }
+/* medium: number bottom-left, small line chart filling the right */
+.tv2-medium { flex: 1; min-height: 0; display: flex; align-items: stretch; gap: 12px; }
+.tv2-medium .tv2-reading { flex: none; align-self: flex-end; }
+/* min-width: when a small tile grows to medium the chart mounts before the grid widens the tile */
+.tv2-medium .tv2-chart { min-width: 80px; }
+.tv2-medium .tv2-value { font-size: clamp(var(--fs-value-min), calc((55cqw - var(--tv2-unit, 0px)) / (var(--tv2-chars, 4) * 0.62)), var(--fs-value-max)); }
+/* per-tile number picker (customize mode, multi-key channels) */
+.tv2 .tv2-pick {
+  align-self: flex-start;
+  margin-bottom: 6px;
+  padding: 2px 6px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius);
+  font: inherit;
+  font-size: var(--fs-small);
+}
+.tv2-unpicked .tv2-add-pick { flex: 1; min-height: 0; flex-direction: column; flex-wrap: nowrap; justify-content: flex-start; gap: 10px; padding: 0; overflow: auto; }
+/* "pick a channel": one group per car system */
+.tv2-system { display: flex; flex-wrap: wrap; gap: 6px; }
+.tv2-system h3 { flex-basis: 100%; margin: 0; font-size: var(--fs-small); font-weight: 600; color: var(--muted); }
+
+/* ---- round Metro app-bar buttons, top-right of each tile ---- */
+.tv2-controls { display: flex; gap: 6px; margin-left: auto; }
+.tv2 .tv2-controls button {
+  width: var(--control-size);
+  height: var(--control-size);
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--text);
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--text);
+  transition: transform 120ms;
+}
+/* pressed = inverted, like the WP app bar */
+.tv2 .tv2-controls button:active {
+  background: var(--text);
+  color: var(--bg);
+  transform: scale(0.92);
+}
+
+/* ---- empty "+ add tile" slot ---- */
+.tv2-add {
+  height: 100%;
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: var(--add-bg);
+  border: 1px dashed var(--add-border);
+  border-radius: var(--radius);
+}
+/* "#" grid: 6px lines every 36px, a line through the tile's centre, blurred on its own layer */
+.tv2-add-grid {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, transparent 15px, var(--add-grid) 15px 21px, transparent 21px),
+    linear-gradient(transparent 15px, var(--add-grid) 15px 21px, transparent 21px);
+  background-size: 36px 36px;
+  background-position: center;
+  filter: blur(3px);
+  pointer-events: none;
+}
+.tv2 .tv2-add-btn {
+  position: relative;
+  padding: 6px 12px;
+  background: var(--add-bg);
+  font-size: var(--fs-body);
+  color: var(--text);
+}
+.tv2-add-pick {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px;
+}
+.tv2 .tv2-add-pick button {
+  padding: 4px 10px;
+  background: var(--add-bg);
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius);
+  font-size: var(--fs-ui);
+  color: var(--text);
+}

@@ -1,0 +1,118 @@
+/* Every color, font size and spacing value for /telemetry-v2, named by role.
+   Change a value here, not in the other stylesheets: they only use these names.
+   Canvas charts can't read CSS, so their colors live in config/theme.ts. */
+.tv2 {
+  /* ---- colors with a meaning (never use them for decoration) ---- */
+  --alarm: #ab0520; /* Arizona Red: the CAR has a problem (outline meter, OVER LIMIT tile, emergency stop) */
+  --alarm-track: rgba(171, 5, 32, 0.18); /* the faint rest of the outline meter */
+  --data-problem: #0c234b; /* Arizona Blue: the DATA has a problem (no-data edge, silent radio); also the command buttons */
+  --press: #850000; /* brand maroon: buttons while pressed (never the alarm red) */
+
+  /* ---- page and tiles (the light theme overrides these, below) ---- */
+  --bg: #000000;
+  --toolbar: #0a0a0a; /* customize toolbar */
+  --tile: #222222;
+  --tile-border: #2e2e2e;
+  --divider: #262626;
+  --control-border: #3a3a3a; /* outlines of text buttons, pickers, channel buttons */
+  --add-border: #4a4a4a; /* dashed "+ add tile" slot and drop target */
+  --add-grid: #3a3a3a; /* the blurred "#" in the add slot */
+  --add-bg: #000000; /* "+ add tile" slot and its buttons */
+  --text: #e6e6e6;
+  --value: #ffffff; /* the big number */
+  --muted: #9a9a9a; /* units, toolbar text, picker headings */
+  --focus: #ffffff; /* keyboard focus ring */
+  --tile-label: #8a8a8a; /* tile labels, limit bar text, radio panel headings and notes */
+  --limit-track: #333333; /* limit bar background */
+  --limit-fill: #8a8a8a; /* limit bar fill below the warning */
+  --stale-tile: #141414; /* no-data tile background */
+  --stale-value: #4a4a4a; /* the "—" on a no-data tile */
+  --on-alarm: #ffffff; /* text on the red OVER LIMIT tile */
+  --on-alarm-track: rgba(255, 255, 255, 0.3); /* limit bar track on the red tile, emergency stop progress track */
+  --pulse: #ffffff; /* the flash when a tile first goes over */
+  --map-line: #9a9a9a; /* GPS path, start circle, scale bar and map text */
+  --map-car: #ffffff;
+  --map-car-glow: drop-shadow(0 0 4px rgba(255, 255, 255, 0.85)) drop-shadow(0 0 10px rgba(255, 255, 255, 0.4));
+
+  /* ---- header (the same in both themes) ---- */
+  --brand-sky-top: #aa0722;
+  --brand-sky-bottom: #8f0c2a;
+  --ridge-back: #6d0b26; /* also baked into assets/header-ridge.svg */
+  --ridge-front: #1d1f46; /* also baked into assets/header-ridge.svg */
+  --on-brand: #ffffff; /* active pivot name, signal readout, active time window */
+  --on-brand-near: rgba(255, 255, 255, 0.75); /* pivot names next to the active one */
+  --on-brand-far: rgba(255, 255, 255, 0.5); /* outer pivot names */
+  --on-brand-control: rgba(255, 255, 255, 0.8); /* theme and customize buttons */
+  --on-brand-dim: rgba(255, 255, 255, 0.6); /* inactive time window buttons */
+  --on-brand-off: rgba(255, 255, 255, 0.35); /* unlit signal bars */
+  --egg-backdrop: rgba(0, 0, 0, 0.85);
+
+  /* ---- radio panel (the same in both themes) ---- */
+  --panel-bg: #000000;
+  --panel-text: #ffffff;
+  --panel-soft: #bdbdbd; /* silent status, send results, "testing" toggle */
+  --panel-off: #6a6a6a; /* stats while silent */
+  --panel-button-border: #3a3a3a;
+  --panel-band-button-border: rgba(255, 255, 255, 0.6);
+  --silent-mark-outline: #3a5a8c;
+
+  /* ---- fonts ---- */
+  --font: "Segoe UI", system-ui, -apple-system, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --fs-small: 12px; /* the smallest size for text people read */
+  --fs-ui: 13px; /* toolbar, text buttons, channel picker buttons, link status */
+  --fs-body: 14px; /* tile labels and status, radio panel text */
+  --fs-unit: 18px; /* unit after the big number; tiles/parts/Reading.tsx assumes about 13px per character */
+  --fs-value-min: 12px; /* the big number shrinks between these two to fit its tile */
+  --fs-value-max: 64px;
+  --value-weight: 400;
+  --fs-pivot-active: 40px;
+  --fs-pivot-near: 26px;
+  --fs-pivot-far: 22px;
+  --fs-panel-title: 44px;
+  --fs-panel-stat: 30px;
+  --fs-panel-band: 32px;
+  --fs-panel-freq: 20px;
+  --fs-panel-heading: 11px; /* caps headings and stat labels in the radio panel */
+  --fs-command: 15px;
+  --fs-command-code: 10px;
+  --fs-estop: 16px;
+
+  /* ---- spacing and sizes ---- */
+  --header-h: 92px; /* the radio panel and the fullscreen overlay sit just under it */
+  --page-pad: 16px; /* gutter around the grid and in the header; must match GRID.pad in config/theme.ts */
+  --grid-gap: 8px; /* between tiles; must match GRID.gap in config/theme.ts */
+  --tile-pad: 14px;
+  --radius: 3px;
+  --control-size: 28px; /* round tile buttons */
+  --button-h: 32px; /* text and icon buttons */
+  --logo-left: 18px;
+  --logo-top: 5px;
+  --logo-h: 54px;
+  --ridge-h: 34px;
+  --panel-width: 420px; /* must match RADIO_PANEL_WIDTH in config/theme.ts */
+  --command-h: 72px;
+  --estop-h: 56px;
+  --limit-bar-h: 4px;
+  --meter-w: 3px; /* outline meter stroke */
+  --stale-edge: 2px; /* blue inset edge on a no-data tile */
+
+  /* ---- motion ---- */
+  --ease: cubic-bezier(0.1, 0.9, 0.2, 1); /* Metro easing */
+}
+.tv2.light {
+  --bg: #f2f2f2;
+  --toolbar: #e8e8e8;
+  --tile: #ffffff;
+  --tile-border: #dddddd;
+  --divider: #dddddd;
+  --control-border: #cccccc;
+  --add-border: #b0b0b0;
+  --add-grid: #d0d0d0;
+  --text: #1a1a1a;
+  --value: #000000;
+  --muted: #666666;
+  --focus: #000000;
+  --map-car: #000000;
+  --map-car-glow: drop-shadow(0 0 4px rgba(0, 0, 0, 0.5));
+}

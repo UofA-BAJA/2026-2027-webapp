@@ -1,0 +1,37 @@
+/* Page root, the button reset, shared text/icon buttons and the customize toolbar. Values come from tokens.css. */
+.tv2 {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  overflow-x: clip; /* clip, not hidden: hidden makes a scroll box and breaks the sticky header */
+}
+/* reset our own buttons only (CommandSender keeps its styling); :where = zero specificity so class rules win */
+.tv2 :where(button:not(.command-sender *)) {
+  all: unset;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+.tv2 button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.tv2 .tv2-icon-btn,
+.tv2 .tv2-text-btn {
+  height: var(--button-h);
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius);
+  color: var(--text);
+}
+.tv2 .tv2-icon-btn { width: var(--button-h); display: grid; place-items: center; }
+.tv2 .tv2-text-btn { padding: 0 12px; display: inline-flex; align-items: center; font-size: var(--fs-ui); font-weight: 400; text-decoration: none; box-sizing: border-box; }
+
+/* ---- customize toolbar ---- */
+.tv2-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px var(--page-pad);
+  background: var(--toolbar);
+  border-bottom: 1px solid var(--divider);
+  font-size: var(--fs-ui);
+  color: var(--muted);
+}

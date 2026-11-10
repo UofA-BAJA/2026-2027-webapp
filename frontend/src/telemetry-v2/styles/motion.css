@@ -1,0 +1,9 @@
+/* Reduced motion. Loaded last so it wins over the animations in the other stylesheets. */
+@media (prefers-reduced-motion: reduce) {
+  .tv2-pivot,
+  .tv2-in { animation: none; }
+  .tv2 .tv2-name,
+  .tv2-tile,
+  .tv2-editing .tv2-tile { transition: none; }
+  .tv2-tile:active { transform: none; }
+}

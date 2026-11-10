@@ -1,0 +1,29 @@
+/* ---- grid: react-grid-layout, 6/4/2 columns by width (colsFor), row height = column width ---- */
+/* loaded after tiles.css: the customize-mode rules below must win over .tv2-tile:active */
+.tv2-grid { display: block; position: relative; }
+/* fullscreen: an overlay over the grid, never a layout change */
+/* fixed below the sticky header, so a tall (scrolled) grid still shows the whole tile */
+.tv2-view { position: fixed; inset: calc(var(--header-h) + var(--page-pad)) var(--page-pad) var(--page-pad); z-index: 5; display: flex; flex-direction: column; }
+.tv2-view > .tv2-tile { flex: 1; }
+/* no press tilt on the overlay: at large widths it swings the corner buttons out from under the cursor */
+.tv2-view > .tv2-tile:active { transform: none; }
+.tv2 .react-grid-item { transition: transform 200ms var(--ease); }
+.tv2 .react-grid-item.react-draggable-dragging { transition: none; z-index: 3; }
+.tv2-editing .react-grid-item:not([class*="static"]) .tv2-tile { cursor: grab; }
+.tv2-editing .react-draggable-dragging .tv2-tile { cursor: grabbing; transform: scale(1.03); opacity: 1; }
+/* drop target: dashed cell outline instead of the library's red box */
+.tv2 .react-grid-item.react-grid-placeholder {
+  background: none;
+  border: 1px dashed var(--add-border);
+  border-radius: var(--radius);
+  opacity: 1;
+}
+
+/* edit mode, WP start-screen style: tiles step back and dim, the one you're on pops forward */
+.tv2-editing .tv2-tile {
+  transform: scale(0.94);
+  opacity: 0.55;
+  transition: transform 200ms var(--ease), opacity 200ms;
+}
+.tv2-editing .tv2-tile:hover,
+.tv2-editing .tv2-tile:focus-within { transform: none; opacity: 1; }

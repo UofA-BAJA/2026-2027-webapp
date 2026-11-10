@@ -15,6 +15,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true, // telemetry-v2 lib/ and config/ import each other as .ts so the node self-checks can run them
     "jsx": "react-jsx"
   },
   "include": ["src"],

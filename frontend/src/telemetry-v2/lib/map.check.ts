@@ -1,4 +1,4 @@
-// Self-check for map.ts. Run from frontend/: node --experimental-strip-types src/telemetry-v2/map.check.ts
+// Self-check for map.ts. Run from frontend/: node --experimental-strip-types src/telemetry-v2/lib/map.check.ts
 import assert from "node:assert/strict";
 import { fitTrack, scaleBar, type Pt } from "./map.ts";
 

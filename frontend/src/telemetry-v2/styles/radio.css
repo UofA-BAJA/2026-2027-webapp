@@ -1,0 +1,108 @@
+/* ---- radio panel: hangs from the header under the signal readout ---- */
+/* fixed at the header's bottom edge (the header is sticky at top 0); `right` is set from the readout */
+.tv2-radio-panel {
+  position: fixed;
+  top: var(--header-h);
+  z-index: 30;
+  width: min(var(--panel-width), calc(100vw - 2 * var(--page-pad)));
+  max-height: calc(100vh - var(--header-h) - var(--page-pad));
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 16px 20px 20px;
+  background: var(--panel-bg);
+  border: 2px solid var(--data-problem);
+  border-top: none; /* hangs out of the mountains */
+  border-radius: 0;
+  color: var(--panel-text);
+  font-size: var(--fs-body);
+}
+.tv2-rp-top { display: flex; align-items: baseline; justify-content: space-between; }
+.tv2-rp-top h2 { margin: 0; font-size: var(--fs-panel-title); font-weight: 300; line-height: 1.1; }
+.tv2-link { display: flex; align-items: center; gap: 6px; font-size: var(--fs-ui); }
+.tv2-link i { width: 8px; height: 8px; background: var(--panel-text); }
+.tv2-link.silent { color: var(--panel-soft); }
+.tv2-link.silent i { background: var(--data-problem); outline: 1px solid var(--silent-mark-outline); }
+.tv2-rp-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0 4px; }
+.tv2-rp-stats b { display: block; font-size: var(--fs-panel-stat); font-weight: 300; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.tv2-rp-stats small, .tv2-radio-panel h3 { font-size: var(--fs-panel-heading); text-transform: uppercase; letter-spacing: 0.04em; color: var(--tile-label); }
+.tv2-rp-stats.silent b { color: var(--panel-off); }
+.tv2-radio-panel section { margin-top: 18px; }
+.tv2-radio-panel h3 { margin: 0 0 8px; font-weight: 700; }
+.tv2-rp-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tv2-rp-note { margin: 6px 0 0; font-size: var(--fs-small); color: var(--tile-label); }
+.tv2-rp-result { margin: 8px 0 0; font-size: var(--fs-small); color: var(--panel-soft); }
+.tv2-rp-freq { min-width: 110px; text-align: center; font-size: var(--fs-panel-freq); font-weight: 300; font-variant-numeric: tabular-nums; }
+/* plain buttons: thin outline; press = brand maroon (never the alarm red) */
+.tv2 .tv2-rp-btn, .tv2 .tv2-rp-select, .tv2 .tv2-rp-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--button-h);
+  padding: 0 12px;
+  border: 1px solid var(--panel-button-border);
+  color: var(--panel-text);
+  text-decoration: none;
+  transition: background-color 120ms ease-out;
+}
+.tv2 .tv2-rp-btn.strong { border-color: var(--panel-text); font-weight: 700; }
+.tv2 .tv2-rp-select { width: 100%; justify-content: space-between; margin-bottom: 8px; }
+.tv2 .tv2-rp-toggle { border-color: transparent; padding: 0; margin-top: 8px; color: var(--panel-soft); }
+.tv2 .tv2-rp-btn:active, .tv2 .tv2-rp-select:active, .tv2 .tv2-rp-toggle:active, .tv2 .tv2-rp-estop:active, .tv2 .tv2-top .tv2-signal:active { background: var(--press); }
+.tv2-rp-types { margin-bottom: 8px; }
+.tv2-rp-checks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; margin-bottom: 8px; }
+.tv2-rp-checks label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.tv2-rp-checks input { accent-color: var(--data-problem); width: 16px; height: 16px; margin: 0; }
+/* command buttons: black, blue outline; press = solid blue */
+.tv2-rp-cmds { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
+.tv2-rp-cmds.two { grid-template-columns: 1fr 1fr; }
+.tv2 .tv2-rp-cmd {
+  height: var(--command-h);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: var(--panel-bg);
+  border: 2px solid var(--data-problem);
+  color: var(--panel-text);
+  font-size: var(--fs-command);
+  text-transform: lowercase;
+  transition: background-color 120ms ease-out;
+}
+.tv2-rp-cmd small { font-size: var(--fs-command-code); text-transform: uppercase; color: var(--tile-label); }
+.tv2 .tv2-rp-cmd:active:not(:disabled) { background: var(--data-problem); }
+.tv2 .tv2-rp-estop {
+  width: 100%;
+  height: var(--estop-h);
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 2px solid var(--alarm);
+  color: var(--panel-text);
+  font-size: var(--fs-estop);
+  transition: background-color 120ms ease-out;
+  touch-action: none; /* a hold must not turn into a scroll */
+}
+.tv2-rp-estop small { font-size: var(--fs-panel-heading); font-weight: 700; letter-spacing: 0.04em; }
+.tv2 .tv2-radio-panel button:disabled { cursor: default; }
+/* silent: the buttons dim, the heading and the "no link" note stay readable */
+.tv2-rp-dim > :not(h3):not(.tv2-rp-note) { opacity: 0.45; }
+/* confirmation bands slide up over the panel bottom */
+.tv2-rp-band {
+  position: sticky;
+  bottom: -20px; /* sits on the panel's bottom edge, over its padding */
+  margin: 16px -20px -20px;
+  padding: 16px 20px 20px;
+  color: var(--panel-text);
+  animation: tv2-band-up 200ms var(--ease);
+}
+@keyframes tv2-band-up { from { transform: translateY(100%); } }
+.tv2-rp-band.blue { background: var(--data-problem); }
+.tv2-rp-band.red { background: var(--alarm); }
+.tv2-rp-band h4 { margin: 0 0 6px; font-size: var(--fs-panel-band); font-weight: 300; }
+.tv2-rp-band p { margin: 0 0 12px; }
+.tv2-rp-band .tv2-rp-btn { border-color: var(--panel-band-button-border); }
+.tv2-rp-progress { height: 6px; margin-bottom: 8px; background: var(--on-alarm-track); }
+/* the duration is set inline from ESTOP_HOLD_MS in config/radio.ts */
+.tv2-rp-progress i { display: block; height: 100%; background: var(--panel-text); animation: tv2-hold 2s linear forwards; }
+@keyframes tv2-hold { from { width: 0; } to { width: 100%; } }

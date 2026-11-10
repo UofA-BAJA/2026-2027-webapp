@@ -1,0 +1,95 @@
+/* ---- header: red sky from the team logo, ridge pinned to the bottom, pivot centered above it ---- */
+.tv2-top {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  height: var(--header-h);
+  padding: 6px var(--page-pad) 30px; /* 6 + 56px band + 30 = 92; the band ends just under the ridge's highest peak */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); /* minmax: wide controls can't push the pivot off center */
+  grid-template-rows: 56px;
+  align-items: center;
+  background: linear-gradient(180deg, var(--brand-sky-top) 0%, var(--brand-sky-bottom) 100%);
+  box-sizing: border-box;
+  /* no overflow: hidden here: the ridge and the logo already sit inside the box */
+}
+/* team mark: the wordmark, swapped for the cactus-only mark below 1100px (<picture> in header/Logo.tsx) */
+/* the <picture> wrapper is what's positioned: Chrome still gives a display:contents picture a grid cell, which pushed the pivot onto the ridge */
+.tv2-top > picture { position: absolute; left: var(--logo-left); top: var(--logo-top); z-index: 0; }
+.tv2-logo { height: var(--logo-h); width: auto; display: block; }
+.tv2-top > picture { touch-action: none; -webkit-touch-callout: none; user-select: none; } /* long press = easter egg, not text select or image menu */
+/* easter egg video: over everything, click/Esc/end closes it */
+.tv2-egg { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: var(--egg-backdrop); cursor: pointer; animation: tv2-egg-in 200ms ease-out; }
+.tv2-egg video { max-width: 90vw; max-height: 90vh; }
+@keyframes tv2-egg-in { from { opacity: 0; } }
+.tv2-ridge { position: absolute; left: 0; bottom: 0; width: 100%; height: var(--ridge-h); z-index: 1; display: block; }
+.tv2-top > nav, .tv2-top > .tv2-right { position: relative; z-index: 2; }
+.tv2-pivot {
+  grid-column: 2;
+  display: flex;
+  align-items: baseline;
+  gap: 22px;
+  white-space: nowrap;
+  animation: tv2-pivot-in 320ms var(--ease) both;
+}
+.tv2-pivot.fwd { --tv2-from: 80px; }
+.tv2-pivot.back { --tv2-from: -80px; }
+@keyframes tv2-pivot-in {
+  from { transform: translateX(var(--tv2-from)); opacity: 0; }
+}
+.tv2 .tv2-name {
+  font-weight: 300;
+  line-height: 1;
+  transition: transform 120ms;
+}
+.tv2 .tv2-name.active { font-size: var(--fs-pivot-active); color: var(--on-brand); }
+.tv2 .tv2-name.near { font-size: var(--fs-pivot-near); color: var(--on-brand-near); }
+.tv2 .tv2-name.far { font-size: var(--fs-pivot-far); color: var(--on-brand-far); }
+.tv2 .tv2-name:active { transform: scale(0.97); }
+/* narrow screens: drop the outer pivot names so the top-bar controls fit (swipe/arrows still reach them) */
+@media (max-width: 1280px) { .tv2 .tv2-name.far { display: none; } }
+/* below 1280 the centered pivot would hit the controls: pivot moves left, controls stay right */
+@media (width < 1280px) {
+  /* left padding clears the logo: 18px + 157px wordmark (54px tall) + 16px gap */
+  .tv2-top { grid-template-columns: auto minmax(0, 1fr); padding-left: 191px; }
+  .tv2-pivot { grid-column: 1; }
+}
+/* the cactus mark is 36px wide at 54px tall: 18 + 36 + 16 (1100 = LOGO_SWAP_BELOW in config/theme.ts) */
+@media (width < 1100px) { .tv2-top { padding-left: 70px; } }
+/* half-screen: only the active name (swipe/arrows still reach the rest) */
+@media (width < 900px) { .tv2 .tv2-name.near { display: none; } }
+
+.tv2-right {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+.tv2-radio { position: relative; }
+/* header controls: white on the red, no borders or boxes */
+.tv2 .tv2-top .tv2-signal { color: var(--on-brand); }
+.tv2 .tv2-top .tv2-text-btn, .tv2 .tv2-top .tv2-icon-btn { border: none; color: var(--on-brand-control); }
+/* borderless, so less padding: at 1440px the controls must clear the 5-name pivot */
+.tv2 .tv2-top .tv2-text-btn { padding: 0 6px; }
+.tv2 .tv2-top .tv2-icon-btn { width: 24px; }
+.tv2-top .tv2-right { gap: 8px; }
+.tv2 .tv2-top .tv2-bars i { background: var(--on-brand-off); }
+.tv2 .tv2-top .tv2-bars i.on { background: var(--on-brand); }
+.tv2 .tv2-top .tv2-ranges button { color: var(--on-brand-dim); }
+.tv2 .tv2-top .tv2-ranges button.on { border-color: transparent; color: var(--on-brand); }
+.tv2 .tv2-signal { display: flex; white-space: nowrap; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }
+.tv2-bars { display: flex; align-items: flex-end; gap: 2px; }
+.tv2-bars i { width: 3px; background: var(--control-border); }
+.tv2-bars i.on { background: var(--text); }
+
+/* page-wide time window, in the header next to "customize" */
+.tv2-ranges { display: flex; gap: 4px; font-size: var(--fs-small); white-space: nowrap; }
+.tv2 .tv2-ranges button {
+  padding: 2px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: var(--muted);
+}
+.tv2 .tv2-ranges button.on { border-color: var(--control-border); color: var(--text); }

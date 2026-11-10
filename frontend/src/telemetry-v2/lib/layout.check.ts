@@ -1,6 +1,9 @@
-// Self-check for colsFor(), pack(), validTiles() and limitState(). Run from frontend/: node --experimental-strip-types src/telemetry-v2/presets.check.ts
+// Self-check for layout.ts and limitState.ts. Run from frontend/: node --experimental-strip-types src/telemetry-v2/lib/layout.check.ts
 import assert from "node:assert/strict";
-import { CHANNELS, PRESETS, colsFor, limitState, pack, validTiles } from "./presets.ts";
+import { CHANNELS, SYSTEMS } from "../config/channels.ts";
+import { PRESETS } from "../config/presets.ts";
+import { colsFor, pack, presetTiles, validTiles } from "./layout.ts";
+import { channelLimit, limitState } from "./limitState.ts";
 
 assert.equal(colsFor(1440), 6);
 assert.equal(colsFor(1200), 6);
@@ -8,12 +11,14 @@ assert.equal(colsFor(1199), 4);
 assert.equal(colsFor(800), 4);
 assert.equal(colsFor(799), 2);
 
+// every preset: shapes kept, inside the grid, no overlap, at every column count
 for (const cols of [2, 4, 6])
   for (const p of PRESETS) {
-    const placed = pack(p.tiles, cols);
+    const tiles = presetTiles(p);
+    const placed = pack(tiles, cols);
     const taken = new Set<string>();
     placed.forEach((t, k) => {
-      assert.equal(t.w, p.tiles[k].w, "shape kept");
+      assert.equal(t.w, tiles[k].w, "shape kept");
       assert.ok(t.x >= 0 && t.x + t.w <= cols, `${p.name} inside ${cols} cols`);
       for (let i = t.x; i < t.x + t.w; i++)
         for (let j = t.y; j < t.y + t.h; j++) {
@@ -22,6 +27,12 @@ for (const cols of [2, 4, 6])
         }
     });
   }
+
+// config: every preset tile is a valid saved tile (known channel, a real size, the map large-only)
+for (const p of PRESETS) assert.ok(validTiles(presetTiles(p)), `${p.name} preset is valid`);
+// config: every channel is in exactly one picker group
+const grouped = SYSTEMS.flatMap((s) => s.channels);
+assert.deepEqual([...grouped].sort(), Object.keys(CHANNELS).sort(), "every channel in exactly one SYSTEMS group");
 
 // dense: a small tile fills the hole a medium tile leaves behind
 const d = pack([{ w: 1, h: 1 }, { w: 2, h: 1 }, { w: 1, h: 1 }], 2);
@@ -47,8 +58,8 @@ assert.ok(!validTiles([{ ...ok, kind: "xy", channels: ["track"] }]), "map must b
 assert.ok(validTiles([{ ...ok, kind: "xy", channels: ["track"], w: 2, h: 2 }]));
 console.log("validTiles ok");
 
-// limits: cvt temp warns from 100, over at 120; motor rpm is a range that is only over ABOVE the governor
-const cvt = CHANNELS.cvt_temp.limit, rpm = CHANNELS.motor_rpm.limit;
+// limits from channels.ts: cvt temp warns from 100, over at 120; motor rpm is a range that is only over ABOVE the governor
+const cvt = channelLimit(CHANNELS.cvt_temp)!, rpm = channelLimit(CHANNELS.motor_rpm)!;
 assert.deepEqual(limitState(90, cvt), { state: "ok", fill: 0.75, meter: 0 });
 assert.equal(limitState(100, cvt).state, "warn");
 assert.equal(limitState(112, cvt).meter, 60);
@@ -59,4 +70,5 @@ assert.equal(limitState(1750, rpm).fill, 0);
 assert.equal(limitState(3800, rpm).state, "ok", "the governor is normal full power");
 assert.equal(limitState(3801, rpm).state, "over");
 assert.equal(limitState(1000, rpm).fill, 0, "below idle clamps to an empty bar");
+assert.equal(channelLimit(CHANNELS.speed), undefined, "no limits = no bar");
 console.log("limitState ok");
