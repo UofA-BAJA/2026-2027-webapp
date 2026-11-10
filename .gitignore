@@ -206,3 +206,8 @@ frontend/dist/
 CLAUDE.md
 AGENTS.md
 .claude/
+
+# telemetry v2 overview deck: edited by hand, rebuild with docs/telemetry-v2-overview/pptx.mjs
+docs/telemetry-v2-overview.pptx
+# LibreOffice "file is open" lock files
+.~lock.*#

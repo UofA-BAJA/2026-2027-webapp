@@ -1,0 +1,9 @@
+{
+  "name": "telemetry-v2-overview",
+  "private": true,
+  "description": "Builds docs/telemetry-v2-overview.pdf and .pptx from the running app and the repo",
+  "type": "module",
+  "devDependencies": {
+    "pptxgenjs": "^4.0.1"
+  }
+}
