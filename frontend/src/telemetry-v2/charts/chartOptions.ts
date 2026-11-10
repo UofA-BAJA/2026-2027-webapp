@@ -180,13 +180,15 @@ export function chartOption(data: ChartData, s: Stream, [from, to]: [number, num
         type: "value",
         position: i ? "right" : "left",
         ...(sc ? { min: sc.min, max: sc.max, interval: sc.step } : { scale: true }),
-        // the unit above the top tick, plus "above range" when the data pushed the axis past its configured range
-        name: sc?.note ? (i ? `{u|${ch.unit}} {n|${sc.note}}` : `{n|${sc.note}} {u|${ch.unit}}`) : `{u|${ch.unit}}`,
+        // the unit at the top of the axis line, plus "above range" when the data pushed the axis past its configured range.
+        // It reads inward from the axis (left axis: starts at it; right axis: ends at it), so the note is never cut off
+        // at the canvas edge and the unit doesn't move when the note appears.
+        name: sc?.note ? (i ? `{n|${sc.note}}  {u|${ch.unit}}` : `{u|${ch.unit}}  {n|${sc.note}}`) : `{u|${ch.unit}}`,
         nameLocation: "end",
         nameGap: 8,
         nameTextStyle: {
           fontSize: CHART.fontSize,
-          align: i ? "left" : "right",
+          align: i ? "right" : "left",
           rich: { u: { color: CHART.unit, fontSize: CHART.fontSize }, n: { color: CHART.rangeNote, fontSize: CHART.fontSize } },
         },
         axisLine: { show: true, lineStyle: { color: CHART.axisLine, width: 1 } },
