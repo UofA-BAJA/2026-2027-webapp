@@ -10,21 +10,15 @@
   --tv2-text: #e6e6e6;
   --tv2-value: #ffffff;
   --tv2-label: #9a9a9a;
-  --tv2-nav-near: #8a8a8a;
-  --tv2-nav-far: #6e6e6e;
   --tv2-active: #ffffff;
-  --tv2-active-weight: 400; /* pivot active name */
   --tv2-value-weight: 400; /* number tile values */
   --tv2-ease: cubic-bezier(0.1, 0.9, 0.2, 1);
-  --tv2-gap: 8px;
-  --tv2-pad: 16px;
   --tv2-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  container-type: inline-size; /* grid rows size off this width */
   min-height: 100vh;
   background: var(--tv2-bg);
   color: var(--tv2-text);
   font-family: "Segoe UI", system-ui, -apple-system, Helvetica, Arial, sans-serif;
-  overflow-x: hidden;
+  overflow-x: clip; /* clip, not hidden: hidden makes a scroll box and breaks the sticky header */
 }
 .tv2.light {
   --tv2-bg: #f2f2f2;
@@ -38,8 +32,6 @@
   --tv2-text: #1a1a1a;
   --tv2-value: #000000;
   --tv2-label: #666666;
-  --tv2-nav-near: #777777;
-  --tv2-nav-far: #a0a0a0;
   --tv2-active: #000000;
 }
 /* reset our own buttons only (CommandSender keeps its styling); :where = zero specificity so class rules win */
@@ -50,18 +42,30 @@
 }
 .tv2 button:focus-visible { outline: 2px solid var(--tv2-active); outline-offset: 2px; }
 
-/* ---- top bar: logo | pivot (truly centered) | controls ---- */
+/* ---- top bar: red sky from the team logo, ridge pinned to the bottom, pivot centered above it ---- */
 .tv2-top {
-  height: 64px;
-  padding: 0 16px;
+  --brand-sky-top: #aa0722;
+  --brand-sky-bottom: #8f0c2a;
+  --ridge-back: #6d0b26; /* also baked into header-ridge.svg */
+  --ridge-front: #1d1f46;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  height: 92px;
+  padding: 6px 16px 30px; /* 6 + 56px band + 30 = 92; the band ends just under the ridge's highest peak */
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); /* minmax: wide controls can't push the pivot off center */
+  grid-template-rows: 56px;
   align-items: center;
-  border-bottom: 1px solid var(--tv2-divider);
+  background: linear-gradient(180deg, var(--brand-sky-top) 0%, var(--brand-sky-bottom) 100%);
   box-sizing: border-box;
+  /* no overflow: hidden here: it would clip the radio popover; ridge and cactus already sit inside the box */
 }
-.tv2-logo { width: 36px; height: 36px; object-fit: cover; }
+.tv2-cactus { position: absolute; left: 22px; top: 24px; height: 64px; z-index: 0; }
+.tv2-ridge { position: absolute; left: 0; bottom: 0; width: 100%; height: 34px; z-index: 1; display: block; }
+.tv2-top > nav, .tv2-top > .tv2-right { position: relative; z-index: 2; }
 .tv2-pivot {
+  grid-column: 2;
   display: flex;
   align-items: baseline;
   gap: 22px;
@@ -78,23 +82,19 @@
   line-height: 1;
   transition: transform 120ms;
 }
-.tv2 .tv2-name.active {
-  font-size: 36px;
-  font-weight: var(--tv2-active-weight);
-  color: var(--tv2-active);
-  text-shadow: 0 4px 16px rgba(0, 0, 0, 0.95);
-}
-.tv2 .tv2-name.near {
-  font-size: 24px;
-  color: var(--tv2-nav-near);
-  text-shadow: 0 0 3px rgba(138, 138, 138, 0.45), 0 3px 8px rgba(0, 0, 0, 0.9);
-}
-.tv2 .tv2-name.far {
-  font-size: 22px;
-  color: var(--tv2-nav-far);
-  text-shadow: 0 0 6px rgba(110, 110, 110, 0.7), 0 3px 10px rgba(0, 0, 0, 0.9);
-}
+.tv2 .tv2-name.active { font-size: 40px; color: #ffffff; }
+.tv2 .tv2-name.near { font-size: 26px; color: rgba(255, 255, 255, 0.75); }
+.tv2 .tv2-name.far { font-size: 22px; color: rgba(255, 255, 255, 0.5); }
 .tv2 .tv2-name:active { transform: scale(0.97); }
+/* narrow screens: drop the outer pivot names so the top-bar controls fit (swipe/arrows still reach them) */
+@media (max-width: 1280px) { .tv2 .tv2-name.far { display: none; } }
+/* below 1280 the centered pivot would hit the controls: pivot moves left, controls stay right */
+@media (max-width: 1279px) {
+  .tv2-top { grid-template-columns: auto minmax(0, 1fr); }
+  .tv2-pivot { grid-column: 1; }
+}
+/* half-screen: only the active name (swipe/arrows still reach the rest) */
+@media (max-width: 899px) { .tv2 .tv2-name.near { display: none; } }
 
 .tv2-right {
   justify-self: end;
@@ -105,7 +105,18 @@
   color: var(--tv2-label);
 }
 .tv2-radio { position: relative; }
-.tv2 .tv2-signal { display: flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }
+/* header controls: white on the red, no borders or boxes */
+.tv2 .tv2-top .tv2-signal { color: #ffffff; }
+.tv2 .tv2-top .tv2-text-btn, .tv2 .tv2-top .tv2-icon-btn { border: none; color: rgba(255, 255, 255, 0.8); }
+/* borderless, so less padding: at 1440px the controls must clear the 5-name pivot */
+.tv2 .tv2-top .tv2-text-btn { padding: 0 6px; }
+.tv2 .tv2-top .tv2-icon-btn { width: 24px; }
+.tv2-top .tv2-right { gap: 8px; }
+.tv2 .tv2-top .tv2-bars i { background: rgba(255, 255, 255, 0.35); }
+.tv2 .tv2-top .tv2-bars i.on { background: #ffffff; }
+.tv2 .tv2-top .tv2-ranges button { color: rgba(255, 255, 255, 0.6); }
+.tv2 .tv2-top .tv2-ranges button.on { border-color: transparent; color: #ffffff; }
+.tv2 .tv2-signal { display: flex; white-space: nowrap; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }
 .tv2-bars { display: flex; align-items: flex-end; gap: 2px; }
 .tv2-bars i { width: 3px; background: var(--tv2-control-border); }
 .tv2-bars i.on { background: var(--tv2-text); }
@@ -114,6 +125,7 @@
   top: calc(100% + 10px);
   right: 0;
   z-index: 10;
+  color: var(--tv2-text);
   padding: 12px 14px;
   background: var(--tv2-toolbar);
   border: 1px solid var(--tv2-control-border);
@@ -145,8 +157,14 @@
   color: var(--tv2-label);
 }
 
-/* ---- grid: react-grid-layout, 6 columns, row height = column width (small 1x1, medium 2x1, large 2x2) ---- */
-.tv2-grid { display: block; }
+/* ---- grid: react-grid-layout, 6/4/2 columns by width (colsFor), row height = column width (small 1x1, medium 2x1, large 2x2) ---- */
+.tv2-grid { display: block; position: relative; }
+/* fullscreen: an overlay over the grid, never a layout change */
+/* fixed below the sticky header, so a tall (scrolled) grid still shows the whole tile */
+.tv2-view { position: fixed; inset: calc(92px + 16px) 16px 16px; z-index: 5; display: flex; flex-direction: column; }
+.tv2-view > .tv2-tile { flex: 1; }
+/* no press tilt on the overlay: at large widths it swings the corner buttons out from under the cursor */
+.tv2-view > .tv2-tile:active { transform: none; }
 .tv2 .react-grid-item { transition: transform 200ms var(--tv2-ease); }
 .tv2 .react-grid-item.react-draggable-dragging { transition: none; z-index: 3; }
 .tv2-editing .react-grid-item:not([class*="static"]) .tv2-tile { cursor: grab; }
@@ -161,6 +179,7 @@
 
 /* ---- tiles ---- */
 .tv2-tile {
+  container-type: inline-size; /* number font sizes off the tile width (cqw) */
   height: 100%;
   overflow: hidden;
   min-width: 0;
@@ -190,7 +209,8 @@
   text-transform: lowercase;
   color: var(--tv2-label);
 }
-.tv2-ranges { display: flex; gap: 4px; margin-left: auto; font-size: 12px; }
+/* page-wide time window, in the top bar next to "customize" */
+.tv2-ranges { display: flex; gap: 4px; font-size: 12px; white-space: nowrap; }
 .tv2 .tv2-ranges button {
   padding: 2px 8px;
   border: 1px solid transparent;
@@ -204,18 +224,41 @@
   font-family: var(--tv2-mono);
   font-variant-numeric: tabular-nums;
   font-weight: var(--tv2-value-weight);
-  font-size: 64px;
+  /* fit the tile: tile width (cqw) minus the fixed-size unit, split over the digits (~0.62em each in mono) */
+  font-size: clamp(12px, calc((100cqw - var(--tv2-unit, 0px)) / (var(--tv2-chars, 4) * 0.62)), 64px);
   line-height: 1;
   color: var(--tv2-value);
 }
 .tv2-unit { font-size: 18px; color: var(--tv2-label); }
 .tv2-limits { margin-top: 6px; font-size: 12px; color: var(--tv2-label); }
-.tv2-chart { flex: 1; min-width: 0; min-height: 0; }
+/* charts fill the tile body; the canvas is absolute inside, so its size never feeds back into the box */
+.tv2-chart { flex: 1 1 0; min-width: 0; min-height: 0; position: relative; }
+
+/* ---- GPS track map (SVG; no axes, equal aspect) ---- */
+.tv2-map { flex: 1 1 0; min-width: 0; min-height: 0; position: relative; overflow: hidden; }
+.tv2-map svg { position: absolute; inset: 0; }
+.tv2-map-path { fill: none; stroke: #9a9a9a; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.tv2-map-start { fill: none; stroke: #9a9a9a; stroke-width: 1.5; }
+.tv2-map-car { fill: #fff; filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.85)) drop-shadow(0 0 10px rgba(255, 255, 255, 0.4)); }
+.tv2.light .tv2-map-car { fill: #000; filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.5)); }
+.tv2-map-info {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #9a9a9a;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+.tv2-map-scale { display: flex; align-items: flex-end; gap: 6px; margin-bottom: 2px; }
+.tv2-map-scale > div { height: 4px; border: 1px solid #9a9a9a; border-top: 0; }
 /* medium: number bottom-left, small line chart filling the right */
 .tv2-medium { flex: 1; min-height: 0; display: flex; align-items: stretch; gap: 12px; }
 .tv2-medium .tv2-reading { flex: none; align-self: flex-end; }
 /* min-width: when a small tile grows to medium the chart mounts before the grid widens the tile */
 .tv2-medium .tv2-chart { min-width: 80px; }
+.tv2-medium .tv2-value { font-size: clamp(12px, calc((55cqw - var(--tv2-unit, 0px)) / (var(--tv2-chars, 4) * 0.62)), 64px); }
 /* per-tile number picker (customize mode, multi-channel tiles) */
 .tv2 .tv2-pick {
   align-self: flex-start;
@@ -228,7 +271,10 @@
   font: inherit;
   font-size: 12px;
 }
-.tv2-unpicked .tv2-add-pick { justify-content: flex-start; padding: 0; overflow: auto; }
+.tv2-unpicked .tv2-add-pick { flex: 1; min-height: 0; flex-direction: column; flex-wrap: nowrap; justify-content: flex-start; gap: 10px; padding: 0; overflow: auto; }
+/* "pick a channel": one group per car system */
+.tv2-system { display: flex; flex-wrap: wrap; gap: 6px; }
+.tv2-system h3 { flex-basis: 100%; margin: 0; font-size: 12px; font-weight: 600; color: var(--tv2-label); }
 
 /* ---- window controls: round Metro app-bar buttons, top-right of each tile ---- */
 .tv2-controls { display: flex; gap: 6px; margin-left: auto; }
@@ -244,12 +290,11 @@
   transition: transform 120ms;
 }
 /* pressed = inverted, like the WP app bar */
-.tv2 .tv2-controls button:active:not([aria-disabled="true"]) {
+.tv2 .tv2-controls button:active {
   background: var(--tv2-text);
   color: var(--tv2-bg);
   transform: scale(0.92);
 }
-.tv2 .tv2-controls button[aria-disabled="true"] { opacity: 0.35; cursor: default; }
 
 /* edit mode, WP start-screen style: tiles step back and dim, the one you're on pops forward */
 .tv2-editing .tv2-tile {
@@ -317,4 +362,3 @@
   .tv2-editing .tv2-tile { transition: none; }
   .tv2-tile:active { transform: none; }
 }
-.tv2-ranges + .tv2-controls { margin-left: 0; }

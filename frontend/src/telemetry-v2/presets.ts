@@ -54,10 +54,25 @@ export const CHANNELS = {
     pick: "imu_rotation_x",
   },
   track: { name: "track", unit: "", keys: ["gps_longitude", "gps_latitude"] },
-  altitude: { name: "altitude", unit: "m", keys: ["gps_altitude"], digits: 1 },
+  // same three GPS series the original /telemetry page charts (DATA_TYPE_MAP); 6 decimals ≈ 0.1 m, so movement shows
+  latitude: { name: "latitude", unit: "°", keys: ["gps_latitude"], digits: 6 },
+  longitude: { name: "longitude", unit: "°", keys: ["gps_longitude"], digits: 6 },
+  altitude: { name: "altitude", unit: "ft", keys: ["gps_altitude"], digits: 0, scale: 3.28084 }, // stream is m; ft to match mph/mi
+  // the radio sends error_code (radio_to_json.py ERRORS); the mock server does not, so it reads "--" there
+  errors: { name: "error code", unit: "", keys: ["error_code"], digits: 0 },
 } satisfies Record<string, Channel>;
 
 export type ChannelId = keyof typeof CHANNELS;
+
+// "pick a channel" list, grouped by car system; every channel belongs to exactly one
+export const SYSTEMS: { name: string; channels: ChannelId[] }[] = [
+  { name: "Drivetrain", channels: ["speed", "distance", "motor_rpm", "wheel_rpm", "cvt_temp"] },
+  { name: "Suspension", channels: ["shocks"] },
+  { name: "Brakes", channels: ["brakes"] },
+  { name: "IMU", channels: ["acceleration", "rotation"] },
+  { name: "GPS", channels: ["track", "latitude", "longitude", "altitude"] },
+  { name: "Errors", channels: ["errors"] },
+];
 
 // Size is detail: small 1x1 = number, medium 2x1 = number + small chart, large 2x2 = chart with legend/axes.
 export const SIZES = [
@@ -72,7 +87,6 @@ export type Tile = {
   channels: ChannelId[]; // empty = just added, waiting for the user to pick; 2 channels = 2 y axes
   w: number;
   h: number;
-  ranges?: boolean; // 30s / 2m / whole run buttons (large view)
   pick?: Pick; // overrides the channel's default number
 };
 
@@ -102,7 +116,7 @@ export const PRESETS: Preset[] = [
       ch("motor_rpm", S),
       ch("cvt_temp", M),
       ch("brakes", M),
-      { kind: "channel", channels: ["speed", "motor_rpm"], ...L, ranges: true },
+      { kind: "channel", channels: ["speed", "motor_rpm"], ...L },
       ch("wheel_rpm", L),
       ch("shocks", M),
       ch("distance", S),
@@ -133,7 +147,28 @@ export const PRESETS: Preset[] = [
   },
   {
     name: "gps",
-    tiles: [{ kind: "xy", channels: ["track"], ...L }, ch("altitude", L), ch("speed", M), ch("distance", M)],
+    tiles: [{ kind: "xy", channels: ["track"], ...L }, ch("latitude", M), ch("longitude", M), ch("altitude", M), ch("speed", S)],
   },
   { name: "custom", tiles: [] },
 ];
+
+// Grid columns by the grid's own width (not the window's), so split views work too.
+export const colsFor = (width: number) => (width >= 1200 ? 6 : width >= 800 ? 4 : 2);
+
+// Dense packing: each tile, in order, takes the first free cell scanning rows top to bottom.
+// Only the order and sizes are stored; positions are recomputed for every column count.
+export function pack<T extends { w: number; h: number }>(tiles: T[], cols: number): (T & { x: number; y: number })[] {
+  const taken = new Set<string>();
+  const fits = (x: number, y: number, w: number, h: number) => {
+    for (let i = x; i < x + w; i++) for (let j = y; j < y + h; j++) if (taken.has(`${i},${j}`)) return false;
+    return true;
+  };
+  return tiles.map((t) => {
+    for (let y = 0; ; y++)
+      for (let x = 0; x + t.w <= cols; x++)
+        if (fits(x, y, t.w, t.h)) {
+          for (let i = x; i < x + t.w; i++) for (let j = y; j < y + t.h; j++) taken.add(`${i},${j}`);
+          return { ...t, x, y };
+        }
+  });
+}

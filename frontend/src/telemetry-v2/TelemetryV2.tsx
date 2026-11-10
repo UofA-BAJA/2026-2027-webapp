@@ -1,16 +1,20 @@
+import * as echarts from "echarts";
 import ReactECharts from "echarts-for-react";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import ReactGridLayout, { useContainerWidth, type Layout } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import { Link } from "react-router-dom";
 import CommandSender from "../Components/CommandSender";
-import { CHANNELS, PRESETS, SIZES, seriesLabel, sizeIndex, type Channel, type ChannelId, type Tile } from "./presets";
+import { CHANNELS, PRESETS, SIZES, SYSTEMS, colsFor, pack, seriesLabel, sizeIndex, type Channel, type ChannelId, type Tile } from "./presets";
+import { fitTrack, scaleBar, type Pt } from "./map";
+import ridge from "./assets/header-ridge.svg";
 import "./telemetry-v2.css";
 
 const STREAM_URL = "http://localhost:8000/stream";
 const N = PRESETS.length;
 const SWIPE_MIN = 20; // px of horizontal wheel delta that counts as a swipe
 const SWIPE_COOLDOWN = 600;
+// page-wide time window; every time chart shows the same span so linked cursors line up
 const RANGES = [
   { label: "30s", s: 30 },
   { label: "2m", s: 120 },
@@ -25,34 +29,13 @@ type Stream = {
   lastAt: number;
   frames: number;
   startedAt: number;
+  firstTs?: number;
+  lastTs?: number;
 };
-type PlacedTile = Tile & { id: string; x?: number; y?: number }; // x/y = grid cell, set once placed
-const COLS = 6;
-
-// Give every tile without a position the first free cell, scanning rows top to bottom.
-function pack(tiles: PlacedTile[], extra: { w: number; h: number }[] = []) {
-  const taken = new Set<string>();
-  const fits = (x: number, y: number, w: number, h: number) => {
-    if (x + w > COLS) return false;
-    for (let i = x; i < x + w; i++) for (let j = y; j < y + h; j++) if (taken.has(`${i},${j}`)) return false;
-    return true;
-  };
-  const claim = (x: number, y: number, w: number, h: number) => {
-    for (let i = x; i < x + w; i++) for (let j = y; j < y + h; j++) taken.add(`${i},${j}`);
-  };
-  const free = (w: number, h: number) => {
-    for (let y = 0; ; y++) for (let x = 0; x < COLS; x++) if (fits(x, y, w, h)) return { x, y };
-  };
-  for (const t of tiles) if (t.x !== undefined && t.y !== undefined) claim(t.x, t.y, t.w, t.h);
-  const placed = tiles.map((t) => {
-    if (t.x !== undefined && t.y !== undefined) return t;
-    const p = free(t.w, t.h)!;
-    claim(p.x, p.y, t.w, t.h);
-    return { ...t, ...p };
-  });
-  const spots = extra.map((e) => { const p = free(e.w, e.h)!; claim(p.x, p.y, e.w, e.h); return p; });
-  return { placed: placed as Required<PlacedTile>[], spots };
-}
+type PlacedTile = Tile & { id: string }; // stored: order and size only; pack() places them per column count
+// time charts share one echarts group: hovering one moves the cursor on all of them
+const CURSOR_GROUP = "tv2-time";
+echarts.connect(CURSOR_GROUP);
 
 // One SSE connection for the whole page; re-renders at 10 Hz.
 function useStream() {
@@ -66,6 +49,8 @@ function useStream() {
       s.rssi = p.rssi;
       s.lastAt = Date.now();
       s.frames++;
+      s.firstTs ??= p.ts;
+      s.lastTs = p.ts;
       for (const [k, v] of Object.entries(p)) {
         if (k === "ts" || k === "rssi" || k === "header" || typeof v !== "number") continue;
         s.latest[k] = v;
@@ -82,15 +67,18 @@ function useStream() {
   return ref.current;
 }
 
-// points from the last `secs` seconds, scaled for display
-function windowed(h: Point[] = [], secs: number, scale = 1): Point[] {
-  let i = 0;
-  if (secs !== Infinity) {
-    const from = (h[h.length - 1]?.[0] ?? 0) - secs;
-    i = h.length;
-    while (i > 0 && h[i - 1][0] >= from) i--;
-  }
+// points at or after `from`, scaled for display
+function windowed(h: Point[] = [], from: number, scale = 1): Point[] {
+  let i = h.length;
+  while (i > 0 && h[i - 1][0] >= from) i--;
   return h.slice(i).map(([t, v]) => [t, v * scale]);
+}
+
+// the shared x range for the page window: [from, to] in stream seconds
+function timeRange(s: Stream, secs: number): [number, number] {
+  const to = s.lastTs ?? 0;
+  const first = s.firstTs ?? 0;
+  return [Math.max(first, to - secs), to]; // never before the first point, so a fresh run fills the width
 }
 
 const AXIS = {
@@ -103,26 +91,21 @@ const AXIS = {
 const SERIES_COLORS = ["#e6e6e6", "#e8a33d", "#4fb3d9", "#c06ce0"];
 
 // compact = the small chart inside a medium tile: lines only, no legend or axes
-function chartOption(tile: Tile, s: Stream, secs: number, tooltip: boolean, compact = false) {
+function chartOption(tile: Tile, s: Stream, [from, to]: [number, number], tooltip: boolean, compact = false) {
   const chs: Channel[] = tile.channels.map((c) => CHANNELS[c]);
   const dual = chs.length > 1;
-  const series =
-    tile.kind === "xy"
-      ? [{
-          type: "line",
-          showSymbol: false,
-          data: (s.history[chs[0].keys[0]] ?? []).map((p, i) => [p[1], s.history[chs[0].keys[1]]?.[i]?.[1]]),
-        }]
-      : chs.flatMap((ch, ci) =>
-          ch.keys.map((k) => ({
-            name: dual ? ch.name : seriesLabel(k),
-            yAxisIndex: ci,
-            type: "line",
-            showSymbol: false,
-            sampling: "lttb",
-            data: windowed(s.history[k], secs, ch.scale),
-          })),
-        );
+  const series = chs.flatMap((ch, ci) =>
+    ch.keys.map((k) => ({
+      name: dual ? ch.name : seriesLabel(k),
+      // at least the channel's own decimals, so lat/lon changes show in the tooltip
+      tooltip: { valueFormatter: (v: unknown) => (typeof v === "number" ? String(+v.toFixed(Math.max(2, ch.digits ?? 0))) : String(v)) },
+      yAxisIndex: ci,
+      type: "line",
+      showSymbol: false,
+      sampling: "lttb",
+      data: windowed(s.history[k], from, ch.scale),
+    })),
+  );
   const legend = series.length > 1 && !compact;
   return {
     animation: false,
@@ -130,13 +113,14 @@ function chartOption(tile: Tile, s: Stream, secs: number, tooltip: boolean, comp
     textStyle: { fontFamily: "inherit" },
     grid: compact
       ? { left: 0, right: 0, top: 4, bottom: 4 }
-      : { left: 0, right: tile.kind === "xy" ? 32 : 0, top: legend ? 30 : 8, bottom: 0, containLabel: true },
+      : { left: 0, right: 0, top: legend ? 30 : 8, bottom: 0, containLabel: true },
     legend: legend
       ? { left: 0, top: 0, icon: "rect", itemWidth: 10, itemHeight: 2, textStyle: { color: "#9a9a9a", fontSize: 12 } }
       : undefined,
     // no fade and no hide delay, so nothing lingers after hover
     tooltip: {
       show: tooltip, // off while customizing: dragging tiles under the pointer leaves tooltips stuck
+      showContent: !compact, // medium tiles show only the linked cursor line; a box would cover their number
       trigger: "axis",
       valueFormatter: (v: unknown) => (typeof v === "number" ? String(+v.toFixed(2)) : String(v)),
       className: "tv2-tooltip",
@@ -146,7 +130,8 @@ function chartOption(tile: Tile, s: Stream, secs: number, tooltip: boolean, comp
       borderColor: "#3a3a3a",
       textStyle: { color: "#e6e6e6", fontSize: 12 },
     },
-    xAxis: compact ? { type: "value", show: false, scale: true } : { type: "value", ...AXIS, axisLabel: { ...AXIS.axisLabel, show: tile.kind === "xy" } },
+    // every chart gets the exact page window so the x axes (and linked cursors) line up
+    xAxis: { type: "value", ...(compact ? { show: false } : { ...AXIS, axisLabel: { ...AXIS.axisLabel, show: false } }), scale: true, min: from, max: to },
     yAxis: chs.slice(0, 2).map((_, i) => (compact ? { type: "value", show: false, scale: true } : { type: "value", ...AXIS, position: i ? "right" : "left" })),
     series,
   };
@@ -154,10 +139,9 @@ function chartOption(tile: Tile, s: Stream, secs: number, tooltip: boolean, comp
 
 type TileActions = {
   customizing: boolean;
-  maximized: boolean; // temporarily enlarged to large; a view only, never saved
+  full?: boolean; // this is the fullscreen overlay copy; a view only, the layout never changes
   onResize: () => void;
-  onMinimize: () => void;
-  onToggleMax: () => void;
+  onFull: (on: boolean) => void;
   onDelete: () => void;
   onChannel: (c: ChannelId) => void;
   onPick: (p: string) => void;
@@ -165,19 +149,15 @@ type TileActions = {
 
 // thin-line glyphs for the round Metro buttons (12x12 grid)
 const GLYPHS = {
-  resize: "M3 9l6-6M5.5 3H9v3.5M3 5.5V9h3.5",
-  minimize: "M3 6h6",
-  maximize: "M3 3h6v6H3z",
-  restore: "M4.5 2.5h5v5M2.5 4.5h5v5h-5z",
+  size: "M7 5l3-3M7.5 2H10v2.5M5 7l-3 3M2 7.5V10h2.5", // diagonal arrows: next size
+  fullscreen: "M2 4.5V2h2.5M7.5 2H10v2.5M10 7.5V10H7.5M4.5 10H2V7.5", // corners out
+  exitFullscreen: "M4.5 2v2.5H2M10 4.5H7.5V2M7.5 10V7.5H10M2 7.5h2.5V10", // corners in
   delete: "M3.5 3.5l5 5m0-5-5 5",
 };
 
-function Ctl({ glyph, label, title = label, onClick, disabled }: {
-  glyph: keyof typeof GLYPHS; label: string; title?: string; onClick: () => void; disabled?: boolean;
-}) {
+function Ctl({ glyph, label, onClick }: { glyph: keyof typeof GLYPHS; label: string; onClick: () => void }) {
   return (
-    // aria-disabled (not disabled) so the "already smallest" tooltip still shows on hover
-    <button onClick={disabled ? undefined : onClick} aria-disabled={disabled} aria-label={label} title={title}>
+    <button onClick={onClick} aria-label={label} title={label}>
       <svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="square">
         <path d={GLYPHS[glyph]} />
       </svg>
@@ -185,31 +165,21 @@ function Ctl({ glyph, label, title = label, onClick, disabled }: {
   );
 }
 
+// customize: delete only (tiles move by dragging); normal: size switcher + fullscreen; overlay: restore only
 function TileControls({ tile, a }: { tile: Tile; a: TileActions }) {
   const size = sizeIndex(tile);
-  const smallest = tile.kind === "xy" || size === 0;
   return (
     <div className="tv2-controls">
-      {a.customizing && tile.kind === "channel" && (
-        <Ctl glyph="resize" label="resize" title={`resize to ${SIZES[(size + 1) % 3].name}`} onClick={a.onResize} />
+      {a.full ? (
+        <Ctl glyph="exitFullscreen" label="Restore" onClick={() => a.onFull(false)} />
+      ) : a.customizing ? (
+        <Ctl glyph="delete" label="Delete" onClick={a.onDelete} />
+      ) : (
+        <>
+          {tile.kind === "channel" && <Ctl glyph="size" label={`Make ${SIZES[(size + 1) % 3].name}`} onClick={a.onResize} />}
+          <Ctl glyph="fullscreen" label="Fullscreen" onClick={() => a.onFull(true)} />
+        </>
       )}
-      {a.customizing && (
-        <Ctl
-          glyph="minimize"
-          label="minimize"
-          title={smallest ? "Already the smallest size" : "minimize"}
-          onClick={a.onMinimize}
-          disabled={smallest}
-        />
-      )}
-      <Ctl
-        glyph={a.maximized ? "restore" : "maximize"}
-        label={a.maximized ? "restore" : "maximize"}
-        title={!a.maximized && size === 2 ? "Already the largest size" : undefined}
-        onClick={a.onToggleMax}
-        disabled={!a.maximized && size === 2}
-      />
-      {a.customizing && <Ctl glyph="delete" label="delete" onClick={a.onDelete} />}
     </div>
   );
 }
@@ -234,13 +204,76 @@ const tilt = (e: React.PointerEvent<HTMLElement>) => {
   e.currentTarget.style.setProperty("--tv2-tilt-y", `${(x * 10).toFixed(1)}deg`);
 };
 
-function TileView({ tile, s, delay, a }: { tile: Tile; s: Stream; delay: number; a: TileActions }) {
-  const [secs, setSecs] = useState(30);
+// Calls fn with the element's content size now and whenever it changes (first layout, fullscreen, size switch, window resize).
+function useResize(fn: (w: number, h: number) => void) {
+  const ref = useRef<HTMLDivElement>(null);
+  const cb = useRef(fn);
+  cb.current = fn;
+  useEffect(() => {
+    const ro = new ResizeObserver(([e]) => cb.current(e.contentRect.width, e.contentRect.height));
+    ro.observe(ref.current!);
+    return () => ro.disconnect();
+  }, []);
+  return ref;
+}
+
+// A time chart filling its box. The canvas is absolutely positioned, so it can never push the box
+// bigger or keep it small, and it is resized explicitly whenever the box changes.
+function Chart({ option }: { option: object }) {
   const chart = useRef<ReactECharts>(null);
+  const box = useResize(() => chart.current?.getEchartsInstance().resize());
+  return (
+    <div className="tv2-chart" ref={box} onMouseLeave={() => chart.current?.getEchartsInstance().dispatchAction({ type: "hideTip" })}>
+      <ReactECharts ref={chart} option={option} style={{ position: "absolute", inset: 0, height: "auto" }} onChartReady={(c) => { c.group = CURSOR_GROUP; }} />
+    </div>
+  );
+}
+
+// The GPS track drawn as a map: equal-aspect metres, whole track fitted with 10% padding, car dot at the latest fix.
+function TrackMap({ s }: { s: Stream }) {
+  const [box, setBox] = useState({ w: 0, h: 0 });
+  const ref = useResize((w, h) => setBox({ w, h }));
+  const lat = s.history.gps_latitude ?? [];
+  const lon = s.history.gps_longitude ?? [];
+  const n = Math.min(lat.length, lon.length); // both come from the same frame, so index i pairs them
+  // shortcut: keep ~2000 points of a long run for drawing; switch to a proper simplifier if the shape gets coarse
+  const step = Math.max(1, Math.ceil(n / 2000));
+  const ll: Pt[] = [];
+  for (let i = 0; i < n; i += step) ll.push([lat[i][1], lon[i][1]]);
+  if (n && (n - 1) % step) ll.push([lat[n - 1][1], lon[n - 1][1]]); // always end at the latest fix
+  const fit = ll.length && box.w && box.h ? fitTrack(ll, box.w, box.h) : undefined;
+  const bar = fit && scaleBar(fit.pxPerM);
+  const car = fit?.px[fit.px.length - 1];
+  const alt = s.latest.gps_altitude;
+  return (
+    <div className="tv2-map" ref={ref}>
+      {fit && car && (
+        <svg width={box.w} height={box.h} aria-hidden="true">
+          <polyline className="tv2-map-path" points={fit.px.map((p) => p.join(",")).join(" ")} />
+          <circle className="tv2-map-start" cx={fit.px[0][0]} cy={fit.px[0][1]} r={4} />
+          <circle className="tv2-map-car" cx={car[0]} cy={car[1]} r={5} />
+        </svg>
+      )}
+      <div className="tv2-map-info">
+        {bar && (
+          <div className="tv2-map-scale">
+            <div style={{ width: bar.px }} />
+            {bar.label}
+          </div>
+        )}
+        {n > 0
+          ? `${lat[n - 1][1].toFixed(5)}, ${lon[n - 1][1].toFixed(5)}` +
+            (alt === undefined ? "" : ` · ${(alt * (CHANNELS.altitude.scale ?? 1)).toFixed(0)} ${CHANNELS.altitude.unit}`)
+          : "waiting for GPS"}
+      </div>
+    </div>
+  );
+}
+
+function TileView({ tile, s, range, delay, a }: { tile: Tile; s: Stream; range: [number, number]; delay: number; a: TileActions }) {
   const size = tile.kind === "xy" ? 2 : sizeIndex(tile);
   const chs: Channel[] = tile.channels.map((c) => CHANNELS[c]);
   const ch = chs[0];
-  const hideTip = () => chart.current?.getEchartsInstance().dispatchAction({ type: "hideTip" });
 
   // just added: the tile asks which channel it shows
   if (!ch) {
@@ -251,8 +284,13 @@ function TileView({ tile, s, delay, a }: { tile: Tile; s: Stream; delay: number;
           <TileControls tile={tile} a={a} />
         </div>
         <div className="tv2-add-pick">
-          {(Object.keys(CHANNELS) as ChannelId[]).map((c) => (
-            <button key={c} onClick={() => a.onChannel(c)}>{CHANNELS[c].name}</button>
+          {SYSTEMS.map((sys) => (
+            <section key={sys.name} className="tv2-system">
+              <h3>{sys.name}</h3>
+              {sys.channels.map((c) => (
+                <button key={c} onClick={() => a.onChannel(c)}>{CHANNELS[c].name}</button>
+              ))}
+            </section>
           ))}
         </div>
       </div>
@@ -263,7 +301,10 @@ function TileView({ tile, s, delay, a }: { tile: Tile; s: Stream; delay: number;
   const number = (
     <div className="tv2-reading">
       <div className="tv2-value-row">
-        <span className="tv2-value">{r.text}</span>
+        {/* font shrinks with the character count so long values (lat/lon) fit any tile size; unit is 18px ≈ 13px/char + 8px gap */}
+        <span className="tv2-value" style={{ "--tv2-chars": r.text.length, "--tv2-unit": `${ch.unit.length * 13 + 10}px` } as React.CSSProperties}>
+          {r.text}
+        </span>
         <span className="tv2-unit">{ch.unit}</span>
       </div>
       {ch.limits && (
@@ -273,11 +314,8 @@ function TileView({ tile, s, delay, a }: { tile: Tile; s: Stream; delay: number;
       )}
     </div>
   );
-  const plot = (compact: boolean) => (
-    <div className="tv2-chart" onMouseLeave={hideTip}>
-      <ReactECharts ref={chart} option={chartOption(tile, s, compact ? 30 : secs, !a.customizing, compact)} style={{ height: "100%" }} />
-    </div>
-  );
+  const plot = (compact: boolean) =>
+    tile.kind === "xy" ? <TrackMap s={s} /> : <Chart option={chartOption(tile, s, range, !a.customizing, compact)} />;
 
   return (
     <div
@@ -290,15 +328,6 @@ function TileView({ tile, s, delay, a }: { tile: Tile; s: Stream; delay: number;
           {chs.map((c) => c.name).join(" + ")}
           {size < 2 && r.label}
         </div>
-        {size === 2 && tile.ranges && (
-          <div className="tv2-ranges">
-            {RANGES.map((rg) => (
-              <button key={rg.label} className={rg.s === secs ? "on" : ""} onClick={() => setSecs(rg.s)}>
-                {rg.label}
-              </button>
-            ))}
-          </div>
-        )}
         <TileControls tile={tile} a={a} />
       </div>
       {a.customizing && size < 2 && ch.keys.length > 1 && (
@@ -385,18 +414,28 @@ export default function TelemetryV2() {
   const [dir, setDir] = useState<1 | -1>(1); // pivot slide direction
   const [light, setLight] = useState(() => load<string>("tv2-theme", "dark") === "light");
   const [customizing, setCustomizing] = useState(false);
-  // edited layouts per preset (per-viewer, browser only); presets.ts holds the defaults
-  const [layouts, setLayouts] = useState<Record<string, PlacedTile[]>>(() => load("tv2-layouts-v3", {}));
+  // edited tile order per preset (per-viewer, browser only); presets.ts holds the defaults
+  // v3 stored x/y per tile; its row-by-row order becomes the v4 order
+  const [layouts, setLayouts] = useState<Record<string, PlacedTile[]>>(() =>
+    load("tv2-layouts-v4", null) ??
+    Object.fromEntries(
+      Object.entries(load<Record<string, (PlacedTile & { x?: number; y?: number })[]>>("tv2-layouts-v3", {})).map(([k, ts]) => [
+        k,
+        [...ts].sort((a, b) => (a.y ?? 0) - (b.y ?? 0) || (a.x ?? 0) - (b.x ?? 0)).map(({ x: _x, y: _y, ...t }) => t),
+      ]),
+    ),
+  );
   const [justAdded, setJustAdded] = useState<string>();
-  // tiles temporarily enlarged to large; a view only, never saved, cleared on preset switch
-  const [enlarged, setEnlarged] = useState<string[]>([]);
+  // tile shown fullscreen over the grid; never touches the layout, cleared on preset switch
+  const [fullId, setFullId] = useState<string>();
+  const [secs, setSecs] = useState(30); // page-wide chart window
   const lastSwipe = useRef(0);
   const preset = PRESETS[active];
 
   const go = (step: number) => {
     setDir(step > 0 ? 1 : -1);
     setActive((a) => (a + step + N) % N);
-    setEnlarged([]);
+    setFullId(undefined);
   };
 
   const toggleTheme = () => {
@@ -405,54 +444,40 @@ export default function TelemetryV2() {
   };
 
   const { width, containerRef, mounted } = useContainerWidth();
-  const saved: PlacedTile[] = layouts[preset.name] ?? preset.tiles.map((t, i) => ({ ...t, id: `${preset.name}-${i}` }));
-  const { placed: tiles, spots } = pack(saved, customizing ? [{ w: 1, h: 1 }] : []);
-  const addSpot = spots[0];
+  const tiles: PlacedTile[] = layouts[preset.name] ?? preset.tiles.map((t, i) => ({ ...t, id: `${preset.name}-${i}` }));
+  const cols = colsFor(width);
+  // the "+ add tile" slot packs last, after every tile
+  const placed = pack([...tiles, ...(customizing ? [{ id: "add", w: 1, h: 1 }] : [])], cols);
   const setTiles = (next: PlacedTile[]) => {
     const all = { ...layouts, [preset.name]: next };
     setLayouts(all);
-    save("tv2-layouts-v3", all);
+    save("tv2-layouts-v4", all);
   };
 
   // "+ add tile" drops a small, empty tile into the slot; the tile then asks for its channel
   const addTile = () => {
-    const t: PlacedTile = { kind: "channel", channels: [], w: 1, h: 1, ...addSpot, id: String(Date.now()) };
+    const t: PlacedTile = { kind: "channel", channels: [], w: 1, h: 1, id: String(Date.now()) };
     setTiles([...tiles, t]);
     setJustAdded(t.id);
   };
   const update = (id: string, f: (t: PlacedTile) => PlacedTile) => setTiles(tiles.map((t) => (t.id === id ? f(t) : t)));
-  // new size, kept inside the 6 columns
-  const resized = (t: PlacedTile, i: number): PlacedTile => {
-    const { w, h } = SIZES[i];
-    return { ...t, w, h, x: Math.min(t.x ?? 0, COLS - w) };
-  };
-  // drag-and-drop in customize mode: keep where things landed (sizes stay the saved ones, not the enlarged view)
+  const resize = (id: string) => update(id, (t) => ({ ...t, ...SIZES[(sizeIndex(t) + 1) % SIZES.length] }));
+  // drag-and-drop in customize mode: where things landed (row by row) becomes the new order
   const onDragStop = (l: Layout) => {
-    const at = new Map(l.map((it) => [it.i, it]));
-    setTiles(tiles.map((t) => ({ ...t, x: at.get(t.id)?.x ?? t.x, y: at.get(t.id)?.y ?? t.y })));
+    const at = new Map(l.map((it) => [it.i, it.y * 100 + it.x]));
+    setTiles([...tiles].sort((a, b) => at.get(a.id)! - at.get(b.id)!));
   };
-  const col = (width - 2 * 16 - (COLS - 1) * 8) / COLS;
-  const gridLayout: Layout = [
-    ...tiles.map((t) => {
-      const big = enlarged.includes(t.id);
-      return { i: t.id, x: big ? Math.min(t.x, COLS - 2) : t.x, y: t.y, w: big ? 2 : t.w, h: big ? 2 : t.h };
-    }),
-    ...(customizing ? [{ i: "add", ...addSpot, w: 1, h: 1, isDraggable: false }] : []),
-  ];
+  const col = (width - 2 * 16 - (cols - 1) * 8) / cols;
+  const gridLayout: Layout = placed.map((t) => ({ i: t.id, x: t.x, y: t.y, w: t.w, h: t.h, ...(t.id === "add" && { isDraggable: false }) }));
+  const fullTile = tiles.find((t) => t.id === fullId);
+  const range = timeRange(s, secs);
   const actions = (t: PlacedTile): TileActions => ({
     customizing,
-    maximized: enlarged.includes(t.id),
-    onResize: () => update(t.id, (x) => resized(x, (sizeIndex(x) + 1) % SIZES.length)),
-    onMinimize: () => {
-      update(t.id, (x) => resized(x, Math.max(0, sizeIndex(x) - 1)));
-      setEnlarged(enlarged.filter((id) => id !== t.id));
-    },
-    onToggleMax: () =>
-      setEnlarged(enlarged.includes(t.id) ? enlarged.filter((id) => id !== t.id) : [...enlarged, t.id]),
+    onResize: () => resize(t.id),
+    onFull: (on) => setFullId(on ? t.id : undefined),
     onDelete: () => setTiles(tiles.filter((x) => x.id !== t.id)),
-    // the GPS track is its own large-only kind; let pack() find it a free 2x2
-    onChannel: (c) =>
-      update(t.id, (x) => (c === "track" ? { ...x, kind: "xy", channels: [c], w: 2, h: 2, x: undefined, y: undefined } : { ...x, channels: [c] })),
+    // the GPS track is its own large-only kind
+    onChannel: (c) => update(t.id, (x) => (c === "track" ? { ...x, kind: "xy", channels: [c], w: 2, h: 2 } : { ...x, channels: [c] })),
     onPick: (p) => update(t.id, (x) => ({ ...x, pick: p })),
   });
 
@@ -460,6 +485,7 @@ export default function TelemetryV2() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight") go(1);
       if (e.key === "ArrowLeft") go(-1);
+      if (e.key === "Escape") setFullId(undefined);
     };
     window.addEventListener("keydown", onKey);
     // stop the browser's swipe-to-go-back from eating the preset swipe
@@ -481,7 +507,7 @@ export default function TelemetryV2() {
   return (
     <div className={`tv2${light ? " light" : ""}`}>
       <header className="tv2-top">
-        <img className="tv2-logo" src="/baja_logo.jpg" alt="Baja" />
+        <img className="tv2-ridge" src={ridge} alt="" />
         <nav key={active} className={`tv2-pivot ${dir > 0 ? "fwd" : "back"}`}>
           {[-2, -1, 0, 1, 2].map((d) => (
             <button
@@ -501,6 +527,13 @@ export default function TelemetryV2() {
           <button className="tv2-icon-btn" onClick={toggleTheme} aria-label={light ? "dark theme" : "light theme"}>
             <ThemeIcon light={light} />
           </button>
+          <div className="tv2-ranges" role="group" aria-label="time window">
+            {RANGES.map((rg) => (
+              <button key={rg.label} className={rg.s === secs ? "on" : ""} aria-pressed={rg.s === secs} onClick={() => setSecs(rg.s)}>
+                {rg.label}
+              </button>
+            ))}
+          </div>
           {!customizing && (
             <button className="tv2-text-btn" onClick={() => setCustomizing(true)}>customize</button>
           )}
@@ -522,16 +555,17 @@ export default function TelemetryV2() {
             key={preset.name}
             layout={gridLayout}
             width={width}
-            gridConfig={{ cols: COLS, rowHeight: col, margin: [8, 8], containerPadding: [16, 16] }}
-            dragConfig={{ enabled: customizing, cancel: "button, select, .tv2-ranges" }}
+            gridConfig={{ cols: cols, rowHeight: col, margin: [8, 8], containerPadding: [16, 16] }}
+            dragConfig={{ enabled: customizing, cancel: "button, select" }}
             resizeConfig={{ enabled: false }}
             onDragStop={onDragStop}
           >
             {tiles.map((t, i) => (
               <div key={t.id}>
                 <TileView
-                  tile={enlarged.includes(t.id) ? { ...t, w: 2, h: 2 } : t}
+                  tile={t}
                   s={s}
+                  range={range}
                   a={actions(t)}
                   delay={t.id === justAdded ? 0 : Math.min(i * 35, 300)}
                 />
@@ -543,6 +577,19 @@ export default function TelemetryV2() {
               </div>
             )}
           </ReactGridLayout>
+        )}
+        {fullTile && (
+          // covers the grid; react-grid-layout stays mounted underneath and is never touched
+          <div className="tv2-view">
+            <TileView
+              key={fullTile.id}
+              tile={{ ...fullTile, w: 2, h: 2 }}
+              s={s}
+              range={range}
+              a={{ ...actions(fullTile), customizing: false, full: true }}
+              delay={0}
+            />
+          </div>
         )}
       </main>
     </div>
