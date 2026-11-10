@@ -1,6 +1,6 @@
-// Self-check for colsFor(), pack() and validTiles(). Run from frontend/: node --experimental-strip-types src/telemetry-v2/presets.check.ts
+// Self-check for colsFor(), pack(), validTiles() and limitState(). Run from frontend/: node --experimental-strip-types src/telemetry-v2/presets.check.ts
 import assert from "node:assert/strict";
-import { PRESETS, colsFor, pack, validTiles } from "./presets.ts";
+import { CHANNELS, PRESETS, colsFor, limitState, pack, validTiles } from "./presets.ts";
 
 assert.equal(colsFor(1440), 6);
 assert.equal(colsFor(1200), 6);
@@ -42,6 +42,21 @@ assert.ok(!validTiles([ok, ok]), "duplicate id");
 assert.ok(!validTiles([{ ...ok, w: 3 }]), "unknown shape");
 assert.ok(!validTiles([{ ...ok, w: 1, h: 2 }]), "1x2 is not a size");
 assert.ok(!validTiles([{ ...ok, channels: ["nope"] }]), "unknown channel");
+assert.ok(!validTiles([{ ...ok, channels: ["toString"] }]), "built-in object names are not channels");
 assert.ok(!validTiles([{ ...ok, kind: "xy", channels: ["track"] }]), "map must be large");
 assert.ok(validTiles([{ ...ok, kind: "xy", channels: ["track"], w: 2, h: 2 }]));
 console.log("validTiles ok");
+
+// limits: cvt temp warns from 100, over at 120; motor rpm is a range that is only over ABOVE the governor
+const cvt = CHANNELS.cvt_temp.limit, rpm = CHANNELS.motor_rpm.limit;
+assert.deepEqual(limitState(90, cvt), { state: "ok", fill: 0.75, meter: 0 });
+assert.equal(limitState(100, cvt).state, "warn");
+assert.equal(limitState(112, cvt).meter, 60);
+assert.equal(limitState(120, cvt).state, "over");
+assert.equal(limitState(150, cvt).fill, 1);
+assert.equal(limitState(undefined, cvt).state, "ok");
+assert.equal(limitState(1750, rpm).fill, 0);
+assert.equal(limitState(3800, rpm).state, "ok", "the governor is normal full power");
+assert.equal(limitState(3801, rpm).state, "over");
+assert.equal(limitState(1000, rpm).fill, 0, "below idle clamps to an empty bar");
+console.log("limitState ok");

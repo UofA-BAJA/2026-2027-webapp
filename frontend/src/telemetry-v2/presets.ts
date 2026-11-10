@@ -1,3 +1,17 @@
+// min = where the bar starts (default 0), max = the limit, warn = where the red outline meter starts.
+export type Limit = { min?: number; warn?: number; max: number };
+
+// Where a value sits against its limit: bar fill (0..1), outline meter (0..100 of the perimeter) and status.
+export function limitState(v: number | undefined, l: Limit) {
+  if (v === undefined) return { state: "ok" as const, fill: 0, meter: 0 };
+  const min = l.min ?? 0;
+  const fill = Math.min(1, Math.max(0, (v - min) / (l.max - min)));
+  // a plain range (no warn, e.g. the governor) is fine AT max; only going over it is a problem
+  if (l.warn === undefined ? v > l.max : v >= l.max) return { state: "over" as const, fill: 1, meter: 100 };
+  if (l.warn !== undefined && v >= l.warn) return { state: "warn" as const, fill, meter: ((v - l.warn) / (l.max - l.warn)) * 100 };
+  return { state: "ok" as const, fill, meter: 0 };
+}
+
 // Channels group raw stream keys under one display name.
 // `keys` are the raw field names from the SSE stream and stay the data keys.
 
@@ -10,23 +24,24 @@ export type Channel = {
   keys: string[];
   digits?: number; // decimals shown in number views
   scale?: number; // raw value * scale = displayed value
-  limits?: { warn: number; danger: number };
+  limit?: Limit; // known limits: shows the limit bar, and the tile turns red past them (car problem)
   pick?: Pick; // default number for multi-key channels; users can change it per tile
 };
 
 export const CHANNELS = {
   speed: { name: "speed", unit: "mph", keys: ["car_state_speed"], digits: 1, scale: 2.23694 }, // stream is m/s
   distance: { name: "distance", unit: "mi", keys: ["car_state_distance"], digits: 1, scale: 1 / 1609.344 }, // stream is m
-  // ponytail: guessed CVT limits; set from the CVT belt's rated temperature
-  cvt_temp: { name: "cvt temp", unit: "°C", keys: ["cvt_temperature"], digits: 0, limits: { warn: 100, danger: 120 } },
-  motor_rpm: { name: "motor rpm", unit: "rpm", keys: ["motor_rpm"] },
+  // warn/limit confirmed by the team (were first guessed from the CVT belt's rating)
+  cvt_temp: { name: "cvt temp", unit: "°C", keys: ["cvt_temperature"], digits: 0, limit: { warn: 100, max: 120 } },
+  // idle → governor. Running at the governor is normal full power, so only going over it is red.
+  motor_rpm: { name: "motor rpm", unit: "rpm", keys: ["motor_rpm"], limit: { min: 1750, max: 3800 } },
   wheel_rpm: {
     name: "wheel rpm",
     unit: "rpm",
     keys: ["wheel_rpm_front_left", "wheel_rpm_front_right", "wheel_rpm_rear"],
     pick: "avg",
   },
-  // ponytail: unit is a guess, mock data has no units; confirm with firmware
+  // shortcut: unit is a guess, mock data has no units; confirm with firmware
   brakes: { name: "brakes", unit: "psi", keys: ["brake_pressure_front", "brake_pressure_rear"], digits: 1, pick: "max" },
   shocks: {
     name: "shocks",
@@ -183,7 +198,7 @@ export function validTiles(ts: unknown): boolean {
     if (!t || typeof t.id !== "string" || ids.has(t.id)) return false;
     ids.add(t.id);
     const shape = SIZES.some((s) => s.w === t.w && s.h === t.h);
-    const chans = Array.isArray(t.channels) && t.channels.every((c: unknown) => typeof c === "string" && c in CHANNELS);
+    const chans = Array.isArray(t.channels) && t.channels.every((c: unknown) => typeof c === "string" && Object.hasOwn(CHANNELS, c));
     return shape && chans && (t.kind === "channel" || (t.kind === "xy" && t.w === 2 && t.h === 2)); // the GPS map is large-only
   });
 }
