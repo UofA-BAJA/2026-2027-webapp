@@ -31,9 +31,13 @@
   --on-alarm: #ffffff; /* text on the red OVER LIMIT tile */
   --on-alarm-track: rgba(255, 255, 255, 0.3); /* limit bar track on the red tile, emergency stop progress track */
   --pulse: #ffffff; /* the flash when a tile first goes over */
-  --map-line: #9a9a9a; /* GPS path, start circle, scale bar and map text */
-  --map-car: #ffffff;
-  --map-car-glow: drop-shadow(0 0 4px rgba(255, 255, 255, 0.85)) drop-shadow(0 0 10px rgba(255, 255, 255, 0.4));
+  --map-track: #5a5a5a; /* GPS track line */
+  --map-driven: #81ceeb; /* the part of the current lap already driven (medium, large) */
+  --map-line: #9a9a9a; /* split ticks and S1–S4 labels; start/finish is --value */
+  --map-car: #ab0520; /* the car dot (Arizona Red is its identity here, not an alarm); its ring is --tile */
+  --time-ahead: #4fc27a; /* a lap or split time ahead of the average */
+  --time-behind: #d23a52; /* behind the average; white (--value) = nothing to compare yet */
+  --time-best: #81ceeb; /* best time in each column of the lap table */
 
   /* ---- header (the same in both themes) ---- */
   --brand-sky-top: #aa0722;
@@ -67,6 +71,7 @@
   --fs-body: 14px; /* tile labels and status, radio panel text */
   --fs-value-min: 12px; /* the big number shrinks between these two to fit its tile */
   --fs-value-max: 64px;
+  --fs-lap-value: 36px; /* the lap time on the small and medium GPS tiles, so the map keeps most of the tile */
   --value-weight: 400;
   --fs-pivot-active: 40px;
   --fs-pivot-near: 26px;
@@ -112,6 +117,4 @@
   --value: #000000;
   --muted: #666666;
   --focus: #000000;
-  --map-car: #000000;
-  --map-car-glow: drop-shadow(0 0 4px rgba(0, 0, 0, 0.5));
 }

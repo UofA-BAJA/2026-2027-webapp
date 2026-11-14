@@ -42,7 +42,7 @@ export default function TileShell({ tile, a, size, chs, readingLabel, limit, lim
       <div className="tv2-tile-head">
         <TileControls tile={tile} a={a} />
       </div>
-      {a.customizing && size !== "large" && ch.keys.length > 1 && (
+      {a.customizing && size !== "large" && tile.kind === "channel" && ch.keys.length > 1 && (
         <select className="tv2-pick" value={tile.pick ?? ch.pick ?? "avg"} onChange={(e) => a.onPick(e.target.value)} aria-label="number shown">
           <option value="avg">average</option>
           <option value="max">max</option>

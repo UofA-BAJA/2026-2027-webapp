@@ -5,7 +5,7 @@ import type { ChannelId } from "./channels.ts";
 
 export type PresetTile = {
   channel: ChannelId | ChannelId[]; // one channel, or two for one chart with a y axis each
-  size: "small" | "medium" | "large"; // small = number, medium = number + chart, large = chart ("track" is large only)
+  size: "small" | "medium" | "large"; // small = number, medium = number + chart, large = chart ("track": map + lap time, + splits, + every lap)
   pick?: string; // multi-key channels: which number to show ("avg", "max" or one key); default from channels.ts
 };
 

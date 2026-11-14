@@ -28,7 +28,7 @@ IAM (Identity & Access Management)
 The telemetry dashboard (`/telemetry-v2`, the default page) can run on its own with fake data:
 1. `cd frontend && npm ci` (first time only)
 2. `make ui` from the root folder (stop with `make ui-stop`); this skips the Keycloak login
-3. `python3 tools/mock_server.py` for simulated car data
+3. `python3 tools/mock_server.py` for simulated car data. The car laps a shrunken Nordschleife (about 2:40 a lap); add `--speedup 5` to get laps faster. `tools/trackmap_to_json.py` rebuilds its outline from the source trackmap.
 4. Open http://localhost:5173/
 
 # Setup 

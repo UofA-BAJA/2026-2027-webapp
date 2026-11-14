@@ -14,7 +14,9 @@
   box-sizing: border-box;
   transition: transform 120ms;
 }
-.tv2-tile:active {
+/* not when the press is on a control: the tilt would slide the button out from under the pointer before release,
+   and the browser drops a click that ends off the button (the size button needed several tries) */
+.tv2-tile:active:not(:has(button:active, select:active)) {
   transform: perspective(600px) rotateX(var(--tv2-tilt-x, 0deg)) rotateY(var(--tv2-tilt-y, 0deg)) scale(0.97);
 }
 /* staggered entry; fill-mode backwards so :active's scale still works afterwards */
@@ -89,24 +91,55 @@
    the inline display ECharts sets on the box. */
 .tv2-chart:not(:hover) .tv2-tooltip { display: none !important; }
 
-/* ---- GPS track map (SVG; no axes, equal aspect) ---- */
+/* ---- GPS track map (SVG; no axes, equal aspect) and lap timing ---- */
 .tv2-map { flex: 1 1 0; min-width: 0; min-height: 0; position: relative; overflow: hidden; }
 .tv2-map svg { position: absolute; inset: 0; }
-.tv2-map-path { fill: none; stroke: var(--map-line); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
-.tv2-map-start { fill: none; stroke: var(--map-line); stroke-width: 1.5; }
-.tv2-map-car { fill: var(--map-car); filter: var(--map-car-glow); }
-.tv2-map-info {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  font-size: var(--fs-small);
-  line-height: 1.4;
-  color: var(--map-line);
-  font-variant-numeric: tabular-nums;
-  pointer-events: none;
-}
-.tv2-map-scale { display: flex; align-items: flex-end; gap: 6px; margin-bottom: 2px; }
-.tv2-map-scale > div { height: 4px; border: 1px solid var(--map-line); border-top: 0; }
+.tv2-map-track, .tv2-map-driven { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.tv2-map-track { stroke: var(--map-track); }
+.tv2-map-driven { stroke: var(--map-driven); }
+.tv2-map-tick { stroke: var(--map-line); stroke-width: 2; stroke-linecap: round; }
+.tv2-map-tick.sf { stroke: var(--value); }
+.tv2-map-label { fill: var(--map-line); font-size: var(--fs-small); text-anchor: middle; dominant-baseline: central; }
+.tv2-map-ring { fill: var(--tile); }
+.tv2-stale .tv2-map-ring { fill: var(--stale-tile); }
+.tv2-map-car { fill: var(--map-car); }
+/* time colors, from timeTone() in lib/laps.ts */
+.tv2-ahead { color: var(--time-ahead); }
+.tv2-behind { color: var(--time-behind); }
+.tv2-best { color: var(--time-best); }
+.tv2-lap { flex: 1; min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.tv2 .tv2-lap .tv2-reading { flex: none; align-self: stretch; margin-top: 0; }
+/* the lap time leaves the map most of the tile: smaller than a channel's number, and on medium it fits the left half */
+.tv2 .tv2-lap .tv2-value { font-size: clamp(var(--fs-value-min), calc((100cqw - var(--tv2-unit, 0px)) / (var(--tv2-chars, 4) * 0.62)), var(--fs-lap-value)); }
+.tv2 .tv2-lap-medium .tv2-value { font-size: clamp(var(--fs-value-min), calc((30cqw - var(--tv2-unit, 0px)) / (var(--tv2-chars, 4) * 0.62)), var(--fs-lap-value)); }
+.tv2 .tv2-lap-large .tv2-value { font-size: clamp(var(--fs-value-min), calc((70cqw - var(--tv2-unit, 0px)) / (var(--tv2-chars, 4) * 0.62)), var(--fs-value-max)); }
+.tv2-lap-delta { font-family: var(--font-mono); font-size: var(--fs-unit); color: var(--value); }
+.tv2-lap-delta.tv2-ahead { color: var(--time-ahead); }
+.tv2-lap-delta.tv2-behind { color: var(--time-behind); }
+.tv2-lap-sub { margin-top: 4px; font-size: var(--fs-small); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+/* medium: lap time bottom-left, the map at full height in the middle, split times on the right */
+.tv2 .tv2-lap-medium { flex-direction: row; gap: 14px; }
+.tv2 .tv2-lap-medium .tv2-reading { align-self: flex-end; }
+.tv2-splits { flex: none; display: grid; grid-template-columns: auto auto 5ch; align-content: center; align-items: center; gap: 6px 8px; font-family: var(--font-mono); font-size: var(--fs-small); font-variant-numeric: tabular-nums; color: var(--value); }
+.tv2-split { display: contents; }
+.tv2-split-name { color: var(--tile-label); }
+.tv2-split-time, .tv2-split-delta { text-align: right; }
+/* large: map, the lap table, then the lap time with best and average */
+.tv2-lap-large .tv2-map { min-height: 50%; } /* the table scrolls before the map shrinks past half */
+.tv2-laps-wrap { flex: 0 1 auto; min-height: 0; overflow: auto; }
+.tv2-laps { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: var(--fs-small); font-variant-numeric: tabular-nums; color: var(--text); }
+.tv2-laps th, .tv2-laps td { padding: 2px 6px; text-align: right; white-space: nowrap; }
+.tv2-laps th:first-child, .tv2-laps td:first-child { text-align: left; color: var(--tile-label); }
+.tv2-laps th { position: sticky; top: 0; background: var(--tile); color: var(--tile-label); font-weight: 400; }
+.tv2-laps tfoot td { position: sticky; bottom: 0; background: var(--tile); border-top: 1px solid var(--divider); padding-top: 4px; color: var(--muted); }
+.tv2-laps .tv2-live td { color: var(--value); }
+.tv2-laps .tv2-live td.tv2-ahead { color: var(--time-ahead); }
+.tv2-laps .tv2-live td.tv2-behind { color: var(--time-behind); }
+.tv2-laps td.tv2-best { color: var(--time-best); }
+.tv2-lap-foot { display: flex; align-items: flex-end; gap: 12px; }
+.tv2 .tv2-lap-foot .tv2-reading { flex: 1; min-width: 0; }
+.tv2-lap-stats { flex: none; text-align: right; font-size: var(--fs-small); line-height: 1.5; color: var(--tile-label); }
+.tv2-lap-stats span { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--text); }
 /* medium: number bottom-left, small line chart filling the right */
 .tv2-medium { flex: 1; min-height: 0; display: flex; align-items: stretch; gap: 12px; }
 .tv2-medium .tv2-reading { flex: none; align-self: flex-end; }

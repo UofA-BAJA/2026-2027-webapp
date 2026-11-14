@@ -6,7 +6,7 @@ import RoundButton from "./RoundButton";
 // customize: delete only (tiles move by dragging); normal: size switcher + fullscreen; overlay: exit fullscreen only
 export default function TileControls({ tile, a }: { tile: Tile; a: TileActions }) {
   const size = sizeIndex(tile);
-  const canResize = TILE_TYPES[tile.kind].sizes.length > 1; // the GPS map is large-only
+  const canResize = TILE_TYPES[tile.kind].sizes.length > 1;
   return (
     <div className="tv2-controls">
       {a.full ? (

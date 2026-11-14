@@ -110,7 +110,7 @@ export const CHANNELS = {
     axis: { auto: true },
     pick: "imu_rotation_x",
   },
-  // the GPS track map; plots longitude against latitude, large only
+  // the GPS track map with lap timing (tiles/GpsTile.tsx); lines in config/track.ts
   track: { label: "track", system: "GPS", unit: "", source: "GPS_POSITION", keys: ["gps_longitude", "gps_latitude"], decimals: 0, axis: { auto: true } },
   // the same three GPS series the original /telemetry page charts; 6 decimals ≈ 0.1 m, so movement shows
   latitude: { label: "latitude", system: "GPS", unit: "°", source: "GPS_POSITION", keys: ["gps_latitude"], decimals: 6, axis: { auto: true } },

@@ -30,7 +30,7 @@ export default function TileView({ tile, s, range, delay, a }: { tile: Tile; s: 
     : lim?.state === "over" ? "OVER LIMIT" : lim?.state === "warn" ? (lim.meter >= 60 ? "near limit" : "warming") : "";
 
   return (
-    <TileShell tile={tile} a={a} size={size} chs={chs} readingLabel={r.label} limit={limit} lim={lim} stale={stale} status={status} delay={delay}>
+    <TileShell tile={tile} a={a} size={size} chs={chs} readingLabel={tile.kind === "channel" ? r.label : ""} limit={limit} lim={lim} stale={stale} status={status} delay={delay}>
       <Body tile={tile} s={s} range={range} a={a} ch={ch} r={r} stale={stale} lim={lim} />
     </TileShell>
   );

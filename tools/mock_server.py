@@ -8,6 +8,7 @@ http://localhost:<port>/stream — no hardware required.
 Usage:
     python mock_serial_sse.py
     python mock_serial_sse.py --port 8001 --hz 20
+    python mock_serial_sse.py --speedup 5     # laps 5x faster (lap times stay real)
 """
 
 import argparse
@@ -17,6 +18,8 @@ import random
 import struct
 import threading
 import time
+from bisect import bisect_right
+from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from enum import IntEnum
 
@@ -89,24 +92,74 @@ def build_packet(frames: list[bytes], rssi: int = -60) -> bytes:
 # Fake physics / sensor simulation
 # ---------------------------------------------------------------------------
 
+class Track:
+    """
+    A closed loop to drive around: the Nordschleife outline (tools/track_nordschleife.json), shrunk to
+    SCALE so a lap takes about 2:40, and placed at BASE_LAT/BASE_LON. Gives lat/lon and a target speed
+    (slower in tight corners) at any distance along the loop.
+    """
+
+    SCALE = 1 / 8          # 20.7 km -> ~2.6 km
+    BASE_LAT = 31.7        # where the loop's first point sits
+    BASE_LON = -116.6
+    V_MAX = 20.0           # m/s on the straights
+    V_MIN = 7.0            # m/s in the tightest corners
+    LAT_ACC = 6.0          # m/s^2 of cornering grip: corner speed = sqrt(LAT_ACC * radius)
+
+    def __init__(self, path: Path = Path(__file__).with_name("track_nordschleife.json")):
+        d = json.loads(path.read_text())
+        # flip x so the loop runs clockwise like the real Nordschleife (Döttinger Höhe heading east-northeast into start/finish)
+        pts = [(-x * self.SCALE, y * self.SCALE) for x, y in zip(d["x"], d["y"])]
+        self.pts = pts
+        self.s = [0.0]                                      # distance along the loop at each point
+        for a, b in zip(pts, pts[1:] + pts[:1]):
+            self.s.append(self.s[-1] + math.dist(a, b))
+        self.length = self.s[-1]
+        n = len(pts)
+        # corner speed from the heading change over ~±25 m of track, so single noisy points don't matter
+        w = 10
+        self.v = []
+        for i in range(n):
+            (ax, ay), (bx, by), (cx, cy) = pts[i - w], pts[i], pts[(i + w) % n]
+            turn = abs(math.remainder(math.atan2(cy - by, cx - bx) - math.atan2(by - ay, bx - ax), math.tau))
+            span = math.dist((ax, ay), (bx, by)) + math.dist((bx, by), (cx, cy))
+            radius = span / turn if turn > 1e-6 else float("inf")
+            self.v.append(max(self.V_MIN, min(self.V_MAX, math.sqrt(self.LAT_ACC * radius))))
+        self.k_lon = 111320 * math.cos(math.radians(self.BASE_LAT))
+
+    def _at(self, d: float):
+        d %= self.length
+        i = bisect_right(self.s, d) - 1
+        u = (d - self.s[i]) / (self.s[i + 1] - self.s[i])
+        return i, u
+
+    def latlon(self, d: float) -> tuple[float, float]:
+        i, u = self._at(d)
+        (ax, ay), (bx, by) = self.pts[i], self.pts[(i + 1) % len(self.pts)]
+        x, y = ax + (bx - ax) * u, ay + (by - ay) * u
+        return self.BASE_LAT + y / 110540, self.BASE_LON + x / self.k_lon
+
+    def target_speed(self, d: float, lookahead: float = 30.0) -> float:
+        # brake for the slowest point in the next `lookahead` metres
+        return min(self.v[self._at(d + k)[0]] for k in (0, lookahead / 2, lookahead))
+
+
 class CarSimulator:
     """
-    Drives a simple fake car around a virtual track.
+    Drives a fake car around the Track loop, a little faster or slower each lap.
 
     All state is updated in `step(dt)` and readable as properties.
     """
 
-    # GPS bounding box: Baja California peninsula approximate start
-    BASE_LAT  =  31.7
-    BASE_LON  = -116.6
-
     def __init__(self):
+        self._track    = Track()
+        self._lap_d    = self._track.length - 150.0   # start 150 m before start/finish so lap 1 begins soon
+        self._pace     = 1.0
         self._t        = 0.0           # elapsed seconds
         self._distance = 0.0
         self._speed    = 0.0           # m/s
         self._motor_rpm = 0.0
-        self._lat      = self.BASE_LAT
-        self._lon      = self.BASE_LON
+        self._lat, self._lon = self._track.latlon(self._lap_d)
         self._alt      = 850.0        # metres above sea level
 
         # slow-drift state for temperature
@@ -115,22 +168,26 @@ class CarSimulator:
     def step(self, dt: float):
         self._t += dt
 
-        # --- speed: sinusoidal "accelerate / brake" cycle ----
-        # target speed oscillates between ~5 and ~28 m/s (~18–100 km/h)
-        target = 16.0 + 12.0 * math.sin(self._t * 0.07)
+        # --- speed: chase the track's corner speed, scaled by this lap's pace ----
+        target = self._track.target_speed(self._lap_d) * self._pace
         self._speed += (target - self._speed) * min(dt * 0.8, 1.0)
         self._speed = max(0.0, self._speed)
 
-        # --- distance ---
+        # --- distance; a new lap gets a new pace (±3%) ---
         self._distance += self._speed * dt
+        self._lap_d += self._speed * dt
+        if self._lap_d >= self._track.length:
+            self._lap_d -= self._track.length
+            self._pace = random.gauss(1.0, 0.015)
 
         # --- motor rpm: loosely coupled to speed ---
         self._motor_rpm = self._speed * 120 + random.gauss(0, 30)
         self._motor_rpm = max(0, self._motor_rpm)
 
-        # --- GPS: fake straight-ish track drifting north-east ---
-        self._lat += self._speed * dt * 1e-5 + random.gauss(0, 1e-6)
-        self._lon += self._speed * dt * 5e-6 + random.gauss(0, 1e-6)
+        # --- GPS: position on the loop plus ~0.1 m of noise ---
+        lat, lon = self._track.latlon(self._lap_d)
+        self._lat = lat + random.gauss(0, 1e-6)
+        self._lon = lon + random.gauss(0, 1e-6)
         self._alt  = 850.0 + 10.0 * math.sin(self._t * 0.02) + random.gauss(0, 0.3)
 
         # --- CVT temperature: rises with speed, slow decay ---
@@ -190,8 +247,9 @@ class MockSerialReader:
     Presents the same interface as SerialReader so the SSE handler is unchanged.
     """
 
-    def __init__(self, hz: float = 10.0):
+    def __init__(self, hz: float = 10.0, speedup: float = 1.0):
         self._hz      = hz
+        self._speedup = speedup
         self._sim     = CarSimulator()
         self._running = False
         self._latest_packet = bytearray()
@@ -220,9 +278,9 @@ class MockSerialReader:
             if sleep_for > 0:
                 time.sleep(sleep_for)
 
-            dt = interval
+            dt = interval * self._speedup
             self._sim.step(dt)
-            ts = float(time.time() - t0)
+            ts = float(self._sim._t)   # seconds of simulated driving, so --speedup keeps lap times real
 
             frames = self._build_frames(ts)
             raw    = build_packet(frames, rssi=random.randint(-80, -40))
@@ -357,9 +415,10 @@ def main():
     ap = argparse.ArgumentParser(description="Mock SSE server — no hardware needed.")
     ap.add_argument("--port", type=int,   default=8000, help="HTTP port (default 8000)")
     ap.add_argument("--hz",   type=float, default=10.0, help="Packets per second (default 10)")
+    ap.add_argument("--speedup", type=float, default=1.0, help="Simulated seconds per real second, to get laps quickly (default 1)")
     args = ap.parse_args()
 
-    reader = MockSerialReader(hz=args.hz)
+    reader = MockSerialReader(hz=args.hz, speedup=args.speedup)
     parser = PacketParser()
 
     SSEHandler.serial_reader = reader

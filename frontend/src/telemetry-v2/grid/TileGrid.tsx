@@ -57,8 +57,8 @@ export default function TileGrid({ presetName, tiles, setTiles, customizing, s, 
     onResize: () => resize(t.id),
     onFull: (on) => setFullId(on ? t.id : undefined),
     onDelete: () => setTiles(tiles.filter((x) => x.id !== t.id)),
-    // the GPS track is its own large-only kind
-    onChannel: (c) => update(t.id, (x) => (c === "track" ? { ...x, kind: "xy", channels: [c], w: 2, h: 2 } : { ...x, channels: [c] })),
+    // the GPS track is its own kind (the map with lap timing)
+    onChannel: (c) => update(t.id, (x) => ({ ...x, kind: c === "track" ? "xy" : "channel", channels: [c] })),
     onPick: (p) => update(t.id, (x) => ({ ...x, pick: p })),
   });
 

@@ -56,7 +56,8 @@ assert.ok(!validTiles([{ ...ok, w: 3 }]), "unknown shape");
 assert.ok(!validTiles([{ ...ok, w: 1, h: 2 }]), "1x2 is not a size");
 assert.ok(!validTiles([{ ...ok, channels: ["nope"] }]), "unknown channel");
 assert.ok(!validTiles([{ ...ok, channels: ["toString"] }]), "built-in object names are not channels");
-assert.ok(!validTiles([{ ...ok, kind: "xy", channels: ["track"] }]), "map must be large");
+assert.ok(validTiles([{ ...ok, kind: "xy", channels: ["track"] }]), "the map comes in every size");
+assert.ok(!validTiles([{ ...ok, kind: "map", channels: ["track"] }]), "unknown kind");
 assert.ok(validTiles([{ ...ok, kind: "xy", channels: ["track"], w: 2, h: 2 }]));
 console.log("validTiles ok");
 

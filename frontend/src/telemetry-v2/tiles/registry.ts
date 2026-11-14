@@ -2,7 +2,7 @@
 // Add a tile type here (see ../README.md); the size switcher shows only for types with more than one size.
 import type { ComponentType } from "react";
 import ChartTile from "./ChartTile";
-import GpsTile from "./GpsTile";
+import { GpsLarge, GpsMedium, GpsSmall } from "./GpsTile";
 import NumberChartTile from "./NumberChartTile";
 import NumberTile from "./NumberTile";
 import type { TileBodyProps } from "./types";
@@ -13,6 +13,6 @@ type TileType = { sizes: Size[]; views: Partial<Record<Size, ComponentType<TileB
 export const TILE_TYPES: Record<"channel" | "xy", TileType> = {
   // one channel (or two on one chart): number, number + chart, chart
   channel: { sizes: ["small", "medium", "large"], views: { small: NumberTile, medium: NumberChartTile, large: ChartTile } },
-  // the GPS track map, large only
-  xy: { sizes: ["large"], views: { large: GpsTile } },
+  // the GPS track map with lap timing: map + lap time, + splits, + every lap
+  xy: { sizes: ["small", "medium", "large"], views: { small: GpsSmall, medium: GpsMedium, large: GpsLarge } },
 };

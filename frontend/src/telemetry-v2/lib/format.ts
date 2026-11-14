@@ -14,3 +14,14 @@ export const tsClockShort = (s: Stream, ts: number) => clockShort(tsMs(s, ts));
 
 // a duration as m:ss
 export const mss = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")}`;
+
+// a lap or split time, cut (not rounded) to tenths like a stopwatch: "36.4", "2:42.7"
+export const lapTime = (s: number) => {
+  const t = Math.floor(s * 10);
+  const m = Math.floor(t / 600);
+  const sec = ((t % 600) / 10).toFixed(1);
+  return m ? `${m}:${sec.padStart(4, "0")}` : sec;
+};
+
+// a time difference with its sign: "−0.7", "+1.1" (a real minus sign, so it lines up with the plus)
+export const deltaTime = (d: number) => `${d < 0 ? "−" : "+"}${Math.abs(d).toFixed(1)}`;

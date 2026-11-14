@@ -13,7 +13,7 @@ export const sizeIndex = (t: { w: number; h: number }) => (t.w === 1 ? 0 : t.h =
 
 // A tile as stored in a saved layout (localStorage), so this shape must not change.
 export type Tile = {
-  kind: "channel" | "xy"; // xy plots keys[0] against keys[1] (the GPS track) and is large only
+  kind: "channel" | "xy"; // xy is the GPS track map with lap timing (tiles/GpsTile.tsx)
   channels: ChannelId[]; // empty = just added, waiting for the user to pick; 2 channels = 2 y axes
   w: number;
   h: number;
@@ -69,7 +69,7 @@ export function validTiles(ts: unknown): boolean {
     ids.add(t.id);
     const shape = SIZES.some((s) => s.w === t.w && s.h === t.h);
     const chans = Array.isArray(t.channels) && t.channels.every((c: unknown) => typeof c === "string" && Object.hasOwn(CHANNELS, c));
-    return shape && chans && (t.kind === "channel" || (t.kind === "xy" && t.w === 2 && t.h === 2)); // the GPS map is large-only
+    return shape && chans && (t.kind === "channel" || t.kind === "xy");
   });
 }
 
