@@ -3,8 +3,10 @@ import { TILE_TYPES } from "../registry";
 import type { TileActions } from "../types";
 import RoundButton from "./RoundButton";
 
-// customize: delete only (tiles move by dragging); normal: size switcher + fullscreen; overlay: exit fullscreen only
-export default function TileControls({ tile, a }: { tile: Tile; a: TileActions }) {
+// customize: delete only (tiles move by dragging); normal: size switcher + fullscreen (+ settings, rightmost, for tiles
+// that have them); overlay: exit fullscreen only
+type Props = { tile: Tile; a: TileActions; onSettings?: () => void; settingsOpen?: boolean };
+export default function TileControls({ tile, a, onSettings, settingsOpen }: Props) {
   const size = sizeIndex(tile);
   const canResize = TILE_TYPES[tile.kind].sizes.length > 1;
   return (
@@ -17,6 +19,7 @@ export default function TileControls({ tile, a }: { tile: Tile; a: TileActions }
         <>
           {canResize && <RoundButton glyph="size" label={`Change size (now: ${SIZES[size].name})`} onClick={a.onResize} />}
           <RoundButton glyph="fullscreen" label="Fullscreen" onClick={() => a.onFull(true)} />
+          {onSettings && <RoundButton glyph="gear" label="Settings" onClick={onSettings} expanded={!!settingsOpen} />}
         </>
       )}
     </div>

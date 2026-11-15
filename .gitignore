@@ -212,3 +212,7 @@ AGENTS.md
 docs/telemetry-v2-overview.pptx
 # LibreOffice "file is open" lock files
 .~lock.*#
+
+# elevation GeoTIFFs dropped in for contours are big; only the generated contours/*.geojson are committed
+frontend/elevation/*
+!frontend/elevation/README.md

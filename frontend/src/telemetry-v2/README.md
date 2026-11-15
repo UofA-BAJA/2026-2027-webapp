@@ -8,15 +8,17 @@ Most changes are **data changes in `config/`**. You shouldn't need to read compo
 
 | Folder | What's in it |
 |---|---|
-| `config/` | Data people change: `channels.ts` (every channel, its units, limits and ranges), `presets.ts` (the tile layouts), `radio.ts` (frequencies, data types, command IDs), `theme.ts` (chart colors and a few sizes code needs), `track.ts` (start/finish and split lines for lap timing). No JSX, no logic. |
+| `config/` | Data people change: `channels.ts` (every channel, its units, limits and ranges), `presets.ts` (the tile layouts), `radio.ts` (frequencies, data types, command IDs), `theme.ts` (chart colors and a few sizes code needs), `track.ts` (default start/finish and split lines, `minLapSeconds`), `venues.ts` (event venues and their downloaded imagery), `map.ts` (map background tile URLs). No JSX, no logic. |
+| `tracks/` | One GeoJSON file per saved track, listed in `index.ts`. See `tracks/README.md` for the format, how to add one, and where map data comes from. |
+| `contours/` | Contour lines generated from elevation files dropped in `frontend/elevation/` (see that folder's README). Don't edit by hand. |
 | `styles/` | `tokens.css` holds every color, font size and spacing value by role. The other stylesheets only use those names. |
-| `tiles/` | `registry.ts` (tile type → component per size), the tile bodies (`NumberTile`, `NumberChartTile`, `ChartTile`, `GpsTile`), `PickChannelTile`, `TileView` (works out the number, limits and "no data"), and `parts/` (`TileShell`, `LimitOutline`, `LimitBar`, `TileControls`, `Reading`, `RoundButton`). |
+| `tiles/` | `registry.ts` (tile type → component per size), the tile bodies (`NumberTile`, `NumberChartTile`, `ChartTile`, `GpsTile`), `PickChannelTile`, `TileView` (works out the number, limits and "no data"), and `parts/` (`TileShell`, `LimitOutline`, `LimitBar`, `TileControls`, `Reading`, `RoundButton`; for the GPS tile `TrackMap` (Leaflet map), `MapBackdrop` (satellite/topo/contours/none, offline fallback), `ContourLayer`, `GpsSettings` + `TrackSection` (the gear panel) and `PageHeader`). |
 | `charts/` | `TimeSeriesChart.tsx` is the only ECharts wrapper; `chartOptions.ts` builds the options. |
 | `header/` | `Header`, `Logo`, `Ridges`, `Pivot`, `StatusArea`, `ThemeIcon`, `EasterEgg`. |
 | `grid/` | `TileGrid` (packing, drag-to-reorder, fullscreen overlay) and `AddSlot`. |
 | `radio/` | `Radio` (the signal readout), `RadioPanel`, `CommandButton`, `DataTypePicker`, `sendCommand.ts`. |
-| `hooks/` | `useStream` (the live data), `useLayouts` (saved tile orders), `useResize`. |
-| `lib/` | Plain logic with self-checks: `limitState.ts`, `layout.ts` (sizes, packer, validation), `axisRange.ts`, `headerFit.ts`, `systems.ts`, `stream.ts`, `format.ts`, `map.ts`, `laps.ts` (lap and split timing, time colors), `dataSummary.ts`, `storage.ts`. |
+| `hooks/` | `useStream` (the live data), `useLayouts` (saved tile orders), `useResize`; GPS: `useCourse` (the course lap timing uses, `markStartFinish`), `useTracks` (repo + browser-saved tracks, export), `useGpsMode`, `useMapBackground`, and `persisted` (a small shared value saved in localStorage). |
+| `lib/` | Plain logic with self-checks: `limitState.ts`, `layout.ts` (sizes, packer, validation), `axisRange.ts`, `headerFit.ts`, `systems.ts`, `stream.ts`, `format.ts`, `laps.ts` (lap and split timing, time colors), `course.ts` (start/finish and split geometry), `tracks.ts` (the track file format), `routeFiles.ts` (reading GeoJSON/GPX/KML), `dataSummary.ts`, `storage.ts`. |
 | `TelemetryV2.tsx` | Only puts the pieces together and holds page-wide state. |
 
 ## Recipes
@@ -44,14 +46,28 @@ Edit `PRESETS` in `config/presets.ts`. Each preset is an ordered list of `{ chan
 
 The grid fills tiles in order, left to right, top to bottom, at any window width. A viewer who customized a preset keeps their own version, saved in their browser's localStorage (`tv2-layouts-v4`). Clearing the site data brings the default back; there's no reset button.
 
-### Set the start/finish and split lines
-Lap timing (the `track` tile) needs the lines in `config/track.ts`. The values there now are temporary and fit the mock server's loop, so replace them before timing the real car.
-1. Pick where each line goes: start/finish, then the splits in driving order. Three splits give S1–S4. Choose places the car always passes and no other part of the course runs within ~10 m of.
-2. At each one, take a GPS reading (a phone's map app works; 6 decimals) at the left edge of the course and another at the right edge, straight across. Those are `a` and `b`, as `[latitude, longitude]`. Make the line a bit wider than the course so a wide line still crosses it.
-3. Drive a lap with the dashboard open: S1, S2, ... should fill in on the `track` tile, and its ticks should sit across the track. The first start/finish crossing sets the driving direction; crossing it the other way never counts.
-4. `minLapSeconds`: a start/finish crossing sooner than this after the last one is ignored, so sitting on the line with a jittery GPS doesn't make laps. Keep it below your fastest possible lap.
+### Set up the endurance course
+The endurance route isn't published ahead of time, so the dashboard learns it from the car. Tap the gear on the `track` tile (GPS settings):
+1. MODE → **endurance**. (**free run** turns lap timing off and shows just the map.)
+2. TRACK → **record new** as the car crosses the timing line (it has to be moving). The line goes through the car, square to its direction, 15 m wide. ("use car's position now" under START LINE LOCATION does the same.)
+3. Let it drive one full lap. That lap becomes the route, with S1–S4 at equal distances, and every lap so far is retimed with the splits.
+4. Type a name and **save track**, then **export .geojson** and commit the file to `tracks/` so everyone has it (see `tracks/README.md`). A track from the list, or one from **import file** (`.geojson`, `.gpx`, `.kml`), sets the start line and route in one tap.
+
+The course is saved per venue in the browser, so reloading mid-race keeps it.
+
+`minLapSeconds` in `config/track.ts`: a start/finish crossing sooner than this after the last one is ignored, so sitting on the line with a jittery GPS doesn't make laps. Keep it below your fastest possible lap. The first start/finish crossing sets the driving direction; crossing it the other way never counts.
 
 A missed split (the car went wide of the line, or GPS dropped out) leaves those two segments blank for that lap; the lap time still counts. Averages are over completed laps, and the out lap before the first start/finish crossing isn't timed.
+
+### Add a venue
+The GPS map draws over satellite imagery of the event venue, downloaded ahead of time because the pits may have no internet.
+1. Find the site's corners: south-west and north-east as latitude, longitude, wide enough to hold the whole course and pits (about 2 × 2 km).
+2. From the repo root: `python3 tools/venue_tiles.py <id> <south> <west> <north> <east>`. It's slow (the NAIP server manages ~10 tiles a minute), and re-running picks up where it stopped. Tiles land in `frontend/public/tiles/<id>/`.
+3. Add or edit the venue in `config/venues.ts` with the same `id` and `bounds`, and point `VENUE` at it.
+4. The route doesn't go here: record it at the event or pick a saved track ("Set up the endurance course" above).
+5. Optional, for the **contours** background: drop a USGS elevation GeoTIFF of the venue in `frontend/elevation/` (that folder's README says where to download one). The dev server and the build turn it into `contours/<id>.geojson`; commit that.
+
+Imagery is USDA NAIP through USGS The National Map: public domain, US only. Credit: "Map services and data available from U.S. Geological Survey, National Geospatial Program." Details in `tracks/README.md`.
 
 ### Rename a preset or add a header control
 Just do it. The header measures the logo, the preset names and the controls, and picks the richest layout that fits (five names centered, three centered, three next to the logo, or only the active name). There are no breakpoints to update.
@@ -69,15 +85,25 @@ Just do it. The header measures the logo, the preset names and the controls, and
 3. Add the new `kind` to the `Tile` type and to `validTiles()` in `lib/layout.ts`, so saved layouts with it are accepted.
 
 ## Self-checks
-Run from `frontend/`:
+Run everything (both type checks and every self-check) from `frontend/`:
 
 ```
-node --experimental-strip-types src/telemetry-v2/lib/layout.check.ts   # packer, presets, limits, saved-layout validation
-node --experimental-strip-types src/telemetry-v2/lib/radio.check.ts    # radio config and sendCommand
-node --experimental-strip-types src/telemetry-v2/lib/map.check.ts      # GPS track maths
-node --experimental-strip-types src/telemetry-v2/lib/laps.check.ts     # lap and split detection on a synthetic trace, time colors
+npm run check
+```
+
+Or one at a time:
+
+```
+node --experimental-strip-types src/telemetry-v2/lib/layout.check.ts      # packer, presets, limits, saved-layout validation
+node --experimental-strip-types src/telemetry-v2/lib/radio.check.ts       # radio config and sendCommand
+node --experimental-strip-types src/telemetry-v2/lib/laps.check.ts        # lap and split detection on a synthetic trace, time colors
+node --experimental-strip-types src/telemetry-v2/lib/course.check.ts      # start/finish and split geometry
+node --experimental-strip-types src/telemetry-v2/lib/tracks.check.ts      # every file in tracks/, export/import, GPX/KML/GeoJSON reading
+node --experimental-strip-types plugins/contours.check.ts                 # elevation → contour lines (a synthetic cone)
 node --experimental-strip-types src/telemetry-v2/lib/axisRange.check.ts   # round ticks, grow/shrink of chart ranges
 node --experimental-strip-types src/telemetry-v2/lib/headerFit.check.ts   # which header layout fits
 ```
+
+The checks need Node 22.6 or newer (`--experimental-strip-types`). The app itself builds and runs on Node 20.19+.
 
 `lib/` and `config/` import each other with `.ts` extensions so these run in plain Node. Keep that when you add imports there.

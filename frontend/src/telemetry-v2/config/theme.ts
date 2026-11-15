@@ -59,4 +59,5 @@ export const CSS_VARS = {
   "--page-pad": `${GRID.pad}px`,
   "--panel-width": `${RADIO_PANEL_WIDTH}px`,
   "--fs-unit": `${UNIT_FONT}px`,
+  "--chart-line": CHART.lines[0], // every chart's main line; the GPS map's trail uses it too
 };

@@ -29,19 +29,22 @@ type Props = {
   status: string; // right side of the label row: "warming", "OVER LIMIT", "no data 0:12"
   delay: number; // entry animation stagger
   children: ReactNode; // the tile body
+  onSettings?: () => void; // tiles with settings: the gear toggles them
+  settings?: ReactNode; // the open settings panel, drawn over the tile
 };
 
 // Everything around a tile's body: outline meter, controls, the customize-mode number picker,
 // and the Windows Phone style foot (limit bar, then the label bottom-left under the number, status on the right).
-export default function TileShell({ tile, a, size, chs, readingLabel, limit, lim, stale, status, delay, children }: Props) {
+export default function TileShell({ tile, a, size, chs, readingLabel, limit, lim, stale, status, delay, children, onSettings, settings }: Props) {
   const ch = chs[0];
   const state = lim && lim.state !== "ok" ? ` tv2-${lim.state}` : "";
   return (
     <div className={`tv2-tile tv2-in tv2-${size}${stale ? " tv2-stale" : ""}${state}`} style={{ animationDelay: `${delay}ms` }} onPointerDown={tilt}>
       <LimitOutline lim={lim} />
       <div className="tv2-tile-head">
-        <TileControls tile={tile} a={a} />
+        <TileControls tile={tile} a={a} onSettings={onSettings} settingsOpen={!!settings} />
       </div>
+      {settings}
       {a.customizing && size !== "large" && tile.kind === "channel" && ch.keys.length > 1 && (
         <select className="tv2-pick" value={tile.pick ?? ch.pick ?? "avg"} onChange={(e) => a.onPick(e.target.value)} aria-label="number shown">
           <option value="avg">average</option>

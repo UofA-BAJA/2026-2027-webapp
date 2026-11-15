@@ -1,0 +1,16 @@
+{
+  // Type-checks the Vite plugins (plugins/*.ts), which run in Node. Not referenced by tsconfig.json, so it never
+  // touches the app's build. Run: npx tsc -p tsconfig.plugins.json
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": ["node"],
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true
+  },
+  "include": ["plugins"]
+}

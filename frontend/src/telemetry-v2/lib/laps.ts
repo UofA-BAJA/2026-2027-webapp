@@ -1,7 +1,11 @@
 // Lap and split timing from the GPS trace. A lap ends when the car crosses the start/finish line; a split is
-// recorded when it crosses the next split line (in order; a missed one is skipped). Lines and settings are in config/track.ts.
+// recorded when it crosses the next split line (in order; a missed one is skipped). The lines are the current course
+// (hooks/useCourse.ts: marked, recorded or loaded), defaulting to config/track.ts.
 import { TRACK, type Gate, type LatLon } from "../config/track.ts";
 import type { Stream } from "./stream.ts";
+
+// the lines lap timing needs; no start/finish = no laps
+export type Lines = { startFinish?: Gate; splits: Gate[]; minLapSeconds?: number };
 
 export type Lap = {
   start: number; // stream ts (s) it crossed start/finish, interpolated between fixes
@@ -38,7 +42,7 @@ function cross(g: Gate, p: LatLon, q: LatLon) {
 }
 
 /** Feed one GPS fix (in order). Updates `st` in place. */
-export function addFix(st: Laps, ts: number, ll: LatLon, track = TRACK) {
+export function addFix(st: Laps, ts: number, ll: LatLon, track: Lines = TRACK) {
   const p = st.prev;
   const i = st.n++;
   st.prev = { ts, ll };
@@ -54,10 +58,10 @@ export function addFix(st: Laps, ts: number, ll: LatLon, track = TRACK) {
     st.next = k + 1;
     break;
   }
-  const c = cross(track.startFinish, p.ll, ll);
+  const c = track.startFinish && cross(track.startFinish, p.ll, ll);
   if (!c || (st.dir !== undefined && c.side !== st.dir)) return;
   const t = at(c.u);
-  if (cur && t - cur.start < track.minLapSeconds) return;
+  if (cur && t - cur.start < (track.minLapSeconds ?? TRACK.minLapSeconds)) return;
   if (cur) Object.assign(cur, { end: t, endIdx: i });
   st.laps.push({ start: t, startIdx: i, splits: [], splitIdx: [] });
   st.next = 0;
@@ -65,14 +69,16 @@ export function addFix(st: Laps, ts: number, ll: LatLon, track = TRACK) {
 }
 
 // One tracker per stream, fed only the fixes it hasn't seen, so every GPS tile shares it and it stays cheap.
-const runs = new WeakMap<Stream, Laps>();
-export function lapsFor(s: Stream): Laps {
-  let st = runs.get(s);
-  if (!st) runs.set(s, (st = newLaps()));
+// New lines (start/finish marked, a course loaded) start it over from the first fix, so earlier laps get them too.
+const runs = new WeakMap<Stream, { lines: Lines; st: Laps }>();
+export function lapsFor(s: Stream, lines: Lines = TRACK): Laps {
+  let run = runs.get(s);
+  if (!run || run.lines !== lines) runs.set(s, (run = { lines, st: newLaps() }));
+  const st = run.st;
   const lat = s.history.gps_latitude ?? [];
   const lon = s.history.gps_longitude ?? [];
   const n = Math.min(lat.length, lon.length); // both come from the same frame, so index i pairs them
-  for (let i = st.n; i < n; i++) addFix(st, lat[i][0], [lat[i][1], lon[i][1]]);
+  for (let i = st.n; i < n; i++) addFix(st, lat[i][0], [lat[i][1], lon[i][1]], lines);
   return st;
 }
 

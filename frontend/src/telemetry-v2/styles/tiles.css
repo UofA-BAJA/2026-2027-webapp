@@ -16,7 +16,7 @@
 }
 /* not when the press is on a control: the tilt would slide the button out from under the pointer before release,
    and the browser drops a click that ends off the button (the size button needed several tries) */
-.tv2-tile:active:not(:has(button:active, select:active)) {
+.tv2-tile:active:not(:has(button:active, select:active, .tv2-settings)) {
   transform: perspective(600px) rotateX(var(--tv2-tilt-x, 0deg)) rotateY(var(--tv2-tilt-y, 0deg)) scale(0.97);
 }
 /* staggered entry; fill-mode backwards so :active's scale still works afterwards */
@@ -91,18 +91,30 @@
    the inline display ECharts sets on the box. */
 .tv2-chart:not(:hover) .tv2-tooltip { display: none !important; }
 
-/* ---- GPS track map (SVG; no axes, equal aspect) and lap timing ---- */
-.tv2-map { flex: 1 1 0; min-width: 0; min-height: 0; position: relative; overflow: hidden; }
-.tv2-map svg { position: absolute; inset: 0; }
-.tv2-map-track, .tv2-map-driven { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
-.tv2-map-track { stroke: var(--map-track); }
-.tv2-map-driven { stroke: var(--map-driven); }
-.tv2-map-tick { stroke: var(--map-line); stroke-width: 2; stroke-linecap: round; }
-.tv2-map-tick.sf { stroke: var(--value); }
-.tv2-map-label { fill: var(--map-line); font-size: var(--fs-small); text-anchor: middle; dominant-baseline: central; }
-.tv2-map-ring { fill: var(--tile); }
-.tv2-stale .tv2-map-ring { fill: var(--stale-tile); }
-.tv2-map-car { fill: var(--map-car); }
+/* ---- GPS track map (Leaflet over offline satellite tiles; tiles/parts/TrackMap.tsx) and lap timing ---- */
+/* z-index 0 keeps Leaflet's panes (z-index 400+) inside the map, under the tile controls */
+.tv2 .tv2-map { flex: 1 1 0; min-width: 0; min-height: 0; position: relative; z-index: 0; overflow: hidden; background: var(--map-empty); font: inherit; }
+.tv2-map .leaflet-tile-pane { filter: var(--map-imagery); }
+.tv2-map .leaflet-overlay-pane svg { filter: drop-shadow(0 0 1px var(--map-casing)) drop-shadow(0 0 1px var(--map-casing)); }
+.tv2-map path { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+/* map background (tiles/parts/MapBackdrop.tsx): dimmed so the lines and the car stay the brightest things */
+.tv2-map[data-bg="topo"] .leaflet-tile-pane { filter: var(--map-topo); }
+.tv2-map[data-bg="none"] .leaflet-tile-pane, .tv2-map[data-bg="contours"] .leaflet-tile-pane { display: none; }
+/* contours: thin white lines on black, every 5th brighter; well under the blue route and the red car */
+.tv2-map path.tv2-map-contour { stroke: var(--map-contour); stroke-width: 1; }
+.tv2-map path.tv2-map-contour.major { stroke: var(--map-contour-major); }
+.tv2-map-credit, .tv2-map-offline { position: absolute; bottom: 4px; z-index: 1000; pointer-events: none; }
+.tv2-map-credit { right: 6px; font-size: var(--fs-map-credit); color: var(--map-credit); }
+.tv2-map-offline { left: 6px; font-size: var(--fs-small); color: var(--tile-label); }
+.tv2-map .tv2-map-course { stroke: var(--map-course); stroke-width: 6; }
+.tv2-map .tv2-map-track { stroke: var(--map-track); }
+.tv2-map .tv2-map-driven { stroke: var(--map-driven); }
+.tv2-map .tv2-map-tick { stroke: var(--map-line); stroke-width: 3; }
+.tv2-map .tv2-map-tick.sf { stroke: var(--value); }
+.tv2-map-label { color: var(--map-line); font-size: var(--fs-small); text-align: center; line-height: 16px; text-shadow: 0 0 2px var(--map-casing); pointer-events: none; }
+.tv2-map-car { border-radius: 50%; background: var(--map-car); border: 2px solid var(--tile); box-sizing: border-box; }
+.tv2-map-car.large { border-width: 3px; }
+.tv2-stale .tv2-map-car { border-color: var(--stale-tile); }
 /* time colors, from timeTone() in lib/laps.ts */
 .tv2-ahead { color: var(--time-ahead); }
 .tv2-behind { color: var(--time-behind); }
@@ -230,3 +242,44 @@
   font-size: var(--fs-ui);
   color: var(--text);
 }
+
+
+/* ---- tile settings panel (tiles/parts/GpsSettings.tsx): black Metro page over the whole tile, under its controls ---- */
+.tv2-tile-head { position: relative; z-index: 2; }
+/* a flex column so a 2x2 tile fits without scrolling: each section heading's box carries the gap above it (up to
+   14px) and shrinks first, down to 2px; text items never shrink. Smaller tiles scroll. */
+.tv2-settings {
+  position: absolute; inset: 0; z-index: 1; overflow: auto;
+  display: flex; flex-direction: column;
+  padding: var(--tile-pad);
+  background: var(--panel-bg); color: var(--panel-text);
+}
+.tv2-page-header { padding-right: calc(var(--control-size) + 8px); } /* clear of the gear */
+.tv2-page-title { margin-bottom: 4px; font-size: var(--fs-small); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; line-height: 1.2; color: var(--panel-text); }
+.tv2-page-subtitle { margin: 0; font-size: var(--fs-page-subtitle); font-weight: 300; line-height: 1; color: var(--panel-text); }
+.tv2-settings > * { flex: none; }
+.tv2-settings > h3, .tv2-settings > .tv2-settings-foot { flex: 0 1 calc(1.3em + 14px); min-height: calc(1.3em + 2px); display: flex; align-items: flex-end; }
+.tv2-settings h3 { margin: 0; font-size: var(--fs-panel-heading); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; line-height: 1.3; color: var(--panel-label); }
+/* gaps between options shrink from 18px to 8px with the tile's width (cqw), so the three track actions (~336px of
+   text) stay on one line down to the smallest 2x2 tile (~355px wide inside) before anything wraps */
+.tv2-settings-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0 clamp(8px, calc(50cqw - 170px), 18px); }
+.tv2-settings button { font: inherit; font-weight: 300; line-height: 1.15; padding: 0; border: 0; background: none; cursor: pointer; text-align: left; }
+.tv2-settings .tv2-settings-mode { font-size: var(--fs-settings-option); color: var(--panel-dim); }
+.tv2-settings .tv2-settings-mode.on { color: var(--panel-text); }
+.tv2-settings .tv2-settings-mode.off { color: var(--panel-disabled); cursor: default; }
+.tv2-settings .tv2-settings-action { font-size: var(--fs-settings-action); color: var(--panel-text); }
+.tv2-settings .tv2-settings-action.tv2-act { color: var(--panel-action); } /* actions, not choices */
+.tv2-settings button:not(:disabled):active { opacity: 0.6; }
+.tv2-settings .tv2-settings-action:disabled { color: var(--panel-disabled); cursor: default; } /* "(doesn't work yet)" */
+/* an option with a small hint under it ("coming later", "doesn't work yet") */
+.tv2-settings-opt { display: flex; flex-direction: column; align-items: flex-start; }
+/* width 0 + nowrap: the hint hangs to the right under its neighbours instead of widening the row and wrapping it */
+.tv2-settings-hint { width: 0; white-space: nowrap; font-size: var(--fs-small); line-height: 1.1; color: var(--panel-label); }
+.tv2-settings-list { display: flex; flex-direction: column; align-items: flex-start; }
+.tv2-settings .tv2-settings-track { font-size: var(--fs-settings-action); color: var(--panel-dim); }
+.tv2-settings .tv2-settings-track.on { color: var(--panel-text); }
+.tv2-settings-save { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; margin: 2px 0 4px; }
+.tv2-settings-save input { flex: 1 1 160px; min-width: 0; font: inherit; font-size: var(--fs-body); color: var(--panel-text); background: var(--panel-bg); border: 0; border-bottom: 2px solid var(--panel-dim); padding: 4px 0; }
+.tv2-settings-save input:focus { outline: none; border-bottom-color: var(--panel-text); }
+.tv2-settings-note { margin: 6px 0 0; font-size: var(--fs-small); color: var(--panel-soft); }
+.tv2-settings-foot { margin: 0; font-size: var(--fs-small); line-height: 1.3; color: var(--panel-label); }

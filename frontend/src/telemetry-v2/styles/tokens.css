@@ -31,7 +31,16 @@
   --on-alarm: #ffffff; /* text on the red OVER LIMIT tile */
   --on-alarm-track: rgba(255, 255, 255, 0.3); /* limit bar track on the red tile, emergency stop progress track */
   --pulse: #ffffff; /* the flash when a tile first goes over */
-  --map-track: #5a5a5a; /* GPS track line */
+  --map-track: var(--chart-line); /* the trail the car left (last lap, or the whole run): the charts' line color, from config/theme.ts */
+  --map-course: rgba(255, 255, 255, 0.3); /* the venue's course as traced (config/venues.ts), under the track */
+  --map-casing: rgba(0, 0, 0, 0.7); /* dark edge around map lines so they read on any satellite photo */
+  --map-imagery: brightness(0.55) saturate(0.7); /* satellite tiles dimmed under the white lines and labels */
+  --map-empty: #000000; /* map background: "none", offline, and outside the imagery */
+  --map-topo: brightness(0.38) saturate(0.6); /* the white topo map dimmed well under the lines and the car */
+  --map-credit: #6e6e6e; /* "USGS" in the map corner */
+  --map-contour: rgba(255, 255, 255, 0.2); /* contour lines (background "contours") */
+  --map-contour-major: rgba(255, 255, 255, 0.45); /* every 5th contour */
+  --fs-map-credit: 10px; /* the user asked for 10px here, under the usual 12px minimum */
   --map-driven: #81ceeb; /* the part of the current lap already driven (medium, large) */
   --map-line: #9a9a9a; /* split ticks and S1–S4 labels; start/finish is --value */
   --map-car: #ab0520; /* the car dot (Arizona Red is its identity here, not an alarm); its ring is --tile */
@@ -62,6 +71,10 @@
   --panel-button-border: #3a3a3a;
   --panel-band-button-border: rgba(255, 255, 255, 0.6);
   --silent-mark-outline: #3a5a8c;
+  --panel-dim: rgba(255, 255, 255, 0.45); /* settings: options not chosen */
+  --panel-disabled: rgba(255, 255, 255, 0.2); /* settings: options not available yet */
+  --panel-label: #8a8a8a; /* settings: caps labels and the footer */
+  --panel-action: var(--chart-line); /* settings: actions (record new, import file, export), the charts' blue */
 
   /* ---- fonts ---- */
   --font: "Segoe UI", system-ui, -apple-system, Helvetica, Arial, sans-serif;
@@ -84,6 +97,9 @@
   --fs-command: 15px;
   --fs-command-code: 10px;
   --fs-estop: 16px;
+  --fs-page-subtitle: 56px; /* Metro page header: "settings" under the small caps "GPS" */
+  --fs-settings-option: 24px; /* tile settings panel: mode and background options, then tracks and actions */
+  --fs-settings-action: 20px;
 
   /* ---- spacing and sizes ---- */
   --header-h: 92px; /* the radio panel and the fullscreen overlay sit just under it */

@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { CHANNELS, type Channel } from "../config/channels";
 import { STALE_MS } from "../config/radio";
 import { mss } from "../lib/format";
@@ -11,6 +12,9 @@ import type { TileActions } from "./types";
 
 // One tile: works out its number, "no data" and limit state, then draws the body for its type and size.
 export default function TileView({ tile, s, range, delay, a }: { tile: Tile; s: Stream; range: [number, number]; delay: number; a: TileActions }) {
+  // settings panel open; it closes when the gear hides (customize mode)
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  useEffect(() => { if (a.customizing) setSettingsOpen(false); }, [a.customizing]);
   const chs: Channel[] = tile.channels.map((c) => CHANNELS[c]);
   const ch = chs[0];
   if (!ch) return <PickChannelTile tile={tile} a={a} delay={delay} />; // just added: no channel yet
@@ -30,7 +34,11 @@ export default function TileView({ tile, s, range, delay, a }: { tile: Tile; s: 
     : lim?.state === "over" ? "OVER LIMIT" : lim?.state === "warn" ? (lim.meter >= 60 ? "near limit" : "warming") : "";
 
   return (
-    <TileShell tile={tile} a={a} size={size} chs={chs} readingLabel={tile.kind === "channel" ? r.label : ""} limit={limit} lim={lim} stale={stale} status={status} delay={delay}>
+    <TileShell
+      tile={tile} a={a} size={size} chs={chs} readingLabel={tile.kind === "channel" ? r.label : ""} limit={limit} lim={lim} stale={stale} status={status} delay={delay}
+      onSettings={type.settings && (() => setSettingsOpen((o) => !o))}
+      settings={type.settings && settingsOpen && !a.customizing && !a.full && <type.settings s={s} onClose={() => setSettingsOpen(false)} />}
+    >
       <Body tile={tile} s={s} range={range} a={a} ch={ch} r={r} stale={stale} lim={lim} />
     </TileShell>
   );

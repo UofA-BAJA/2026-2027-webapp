@@ -14,6 +14,19 @@ export type Stream = {
   lastTs?: number;
 };
 
+/** GPS fixes [from, to) as [lat, lon], thinned to `max` points (every nth), always keeping the last one. */
+export function gpsTrace(s: Stream, from: number, to: number, max = 2000): [number, number][] {
+  const lat = s.history.gps_latitude ?? [];
+  const lon = s.history.gps_longitude ?? [];
+  from = Math.max(0, from);
+  to = Math.min(to, lat.length, lon.length);
+  const step = Math.max(1, Math.ceil((to - from) / max)); // shortcut: plain every-nth thinning; use a simplifier if long laps look coarse
+  const out: [number, number][] = [];
+  for (let i = from; i < to; i += step) out.push([lat[i][1], lon[i][1]]);
+  if (to > from && (to - 1 - from) % step) out.push([lat[to - 1][1], lon[to - 1][1]]);
+  return out;
+}
+
 // points at or after `from`, scaled for display
 export function windowed(h: Point[] = [], from: number, scale = 1): Point[] {
   let i = h.length;

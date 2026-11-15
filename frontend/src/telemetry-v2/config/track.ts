@@ -8,12 +8,12 @@ export type Gate = { a: LatLon; b: LatLon };
 
 export const TRACK: { startFinish: Gate; splits: Gate[]; minLapSeconds: number } = {
   // TODO: temporary values for the mock server's loop (tools/mock_server.py); measure the real course
-  startFinish: { a: [31.700071, -116.599934], b: [31.699929, -116.600066] },
+  startFinish: { a: [32.474571, -111.296433], b: [32.474429, -111.296567] },
   // TODO: temporary values for the mock loop, at 1/4, 1/2 and 3/4 of a lap
   splits: [
-    { a: [31.696374, -116.598236], b: [31.696487, -116.598401] },
-    { a: [31.69541, -116.602339], b: [31.695582, -116.602275] },
-    { a: [31.69706, -116.604495], b: [31.696928, -116.604352] },
+    { a: [32.470874, -111.294721], b: [32.470987, -111.294887] },
+    { a: [32.46991, -111.298859], b: [32.470082, -111.298794] },
+    { a: [32.47156, -111.301033], b: [32.471428, -111.300889] },
   ],
   // a start/finish crossing sooner than this after the last one is ignored (GPS jitter while stopped on the line)
   minLapSeconds: 20,

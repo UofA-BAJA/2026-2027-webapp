@@ -14,6 +14,9 @@ export type TileActions = {
   onPick: (p: string) => void;
 };
 
+// What a tile type's settings panel gets.
+export type SettingsProps = { s: Stream; onClose: () => void };
+
 // What every tile body (NumberTile, ChartTile, ...) gets.
 export type TileBodyProps = {
   tile: Tile;

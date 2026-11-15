@@ -100,8 +100,8 @@ class Track:
     """
 
     SCALE = 1 / 8          # 20.7 km -> ~2.6 km
-    BASE_LAT = 31.7        # where the loop's first point sits
-    BASE_LON = -116.6
+    BASE_LAT = 32.4745     # where the loop's first point sits: the Baja SAE Arizona site in Marana, so it
+    BASE_LON = -111.2965   # draws over the downloaded imagery (frontend/src/telemetry-v2/config/venues.ts)
     V_MAX = 20.0           # m/s on the straights
     V_MIN = 7.0            # m/s in the tightest corners
     LAT_ACC = 6.0          # m/s^2 of cornering grip: corner speed = sqrt(LAT_ACC * radius)
