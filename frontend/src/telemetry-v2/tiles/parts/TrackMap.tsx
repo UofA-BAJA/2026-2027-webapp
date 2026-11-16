@@ -1,71 +1,74 @@
-import "leaflet/dist/leaflet.css";
-import L from "leaflet";
-import { useEffect, useMemo } from "react";
-import { MapContainer, Marker, Polyline, useMap } from "react-leaflet";
-import { MAP_MAX_ZOOM } from "../../config/map";
-import { TILE_ZOOMS, VENUE } from "../../config/venues";
-import { MapBackdrop } from "./MapBackdrop";
-import { gpsTrace as trace, type LatLon, type Stream } from "../../lib/stream";
+import { useState, type ReactNode } from "react";
+import { siteFor, useSiteChoice, type Site } from "../../hooks/useSite";
+import { TRAILS, trailStart, useTrail } from "../../hooks/useTrail";
+import { useResize } from "../../hooks/useResize";
+import { fitView, projection, type M } from "../../lib/geo";
+import { gpsIndexAt, gpsTrace, type LatLon, type Stream } from "../../lib/stream";
 
-// The GPS map: a background (MapBackdrop: satellite, topo or none) under the trail the car left and the car.
-// Lines are Leaflet's SVG paths so CSS tokens color them. Only the car dot moves every frame (a CSS transform, GPU
-// composited); the trail is rebuilt once a second.
+// The GPS map, one SVG in screen pixels: the site's image (maps/, or black), the trail the car left, and the car.
+// No tiles and no internet: lat/lon are scaled into the image's corner bounds (flat-earth, fine for a site a few km
+// across). The view fits the trail and the car, or `fitTo` when given (the lap box editor holds it still).
 
-const REDRAW_EVERY = 10; // fixes between rebuilds of the trail: 1 s at 10 Hz
-// the car dot diameter and its tile-colored ring, px by tile size; the smaller tiles have smaller maps
-const CAR = { small: { r: 4, ring: 2 }, medium: { r: 5, ring: 2 }, large: { r: 7, ring: 3 } };
-// Frames `pts` with `pad` (a fraction of the box) on each side, now and whenever the box resizes. Leaflet doesn't
-// watch its own size, so a size switch or fullscreen has to tell it.
-function Fit({ pts, pad }: { pts: LatLon[]; pad: number }) {
-  const map = useMap();
-  useEffect(() => {
-    const fit = () => {
-      const { x, y } = map.getSize();
-      if (x && y && pts.length) map.fitBounds(L.latLngBounds(pts), { padding: [x * pad, y * pad], animate: false });
-    };
-    fit();
-    const ro = new ResizeObserver(() => {
-      map.invalidateSize({ animate: false });
-      fit();
-    });
-    ro.observe(map.getContainer());
-    return () => ro.disconnect();
-  }, [map, pts, pad]);
-  return null;
-}
+const CAR = { small: { r: 4, ring: 2 }, medium: { r: 5, ring: 2 }, full: { r: 7, ring: 3 } }; // px
+const TRAIL_POINTS = 1500; // most trail points drawn; a longer trail is thinned (every nth fix)
+const FADE_STEPS = 12; // the trail is drawn in this many pieces, oldest faintest
 
-export function TrackMap({ s, car: size }: { s: Stream; car: keyof typeof CAR }) {
+export type MapView = { px: (p: LatLon) => [number, number]; toLL: (px: [number, number]) => LatLon; k: number; site?: Site };
+
+type Props = {
+  s: Stream;
+  size: keyof typeof CAR;
+  keep?: LatLon[]; // more points to keep in view (the lap box)
+  fitTo?: LatLon[]; // frame these instead of the trail
+  children?: (v: MapView) => ReactNode; // drawn over the trail, under the car
+};
+
+export function TrackMap({ s, size, keep = [], fitTo, children }: Props) {
+  const [box, setBox] = useState({ w: 0, h: 0 });
+  const ref = useResize((w, h) => setBox({ w, h }));
+  const trailSecs = TRAILS.find((t) => t.id === useTrail())!.seconds;
   const n = Math.min(s.history.gps_latitude?.length ?? 0, s.history.gps_longitude?.length ?? 0);
-  const tick = Math.floor(n / REDRAW_EVERY);
-  // s is one object mutated in place, so the trail rebuilds on the 1 s tick, not on every frame
-  const track = useMemo(() => trace(s, 0, tick * REDRAW_EVERY), [s, tick]);
-  const carIcon = useMemo(() => {
-    const d = 2 * (CAR[size].r + CAR[size].ring);
-    return L.divIcon({ className: `tv2-map-car ${size}`, iconSize: [d, d] });
-  }, [size]);
-  const carAt = n ? trace(s, n - 1, n)[0] : undefined;
-  const frame = track.length ? track : carAt ? [carAt] : [];
+  const car = n ? gpsTrace(s, n - 1, n)[0] : undefined;
+  const site = siteFor(useSiteChoice(), car);
+  const trail = gpsTrace(s, gpsIndexAt(s, trailStart(s, trailSecs)), n, TRAIL_POINTS);
+  const origin = site?.topLeft ?? gpsTrace(s, 0, 1)[0];
+  if (!box.w || !box.h || !origin) return <div className="tv2-map" ref={ref} />;
+
+  const proj = projection(origin);
+  const framed = fitTo ?? [...trail, ...(car ? [car] : []), ...keep];
+  const pts: M[] = (framed.length ? framed : site ? [site.topLeft, site.bottomRight] : []).map(proj.toM);
+  const v = fitView(pts, box.w, box.h);
+  const view: MapView = {
+    px: (p) => {
+      const [x, y] = proj.toM(p);
+      return [(x - v.x0) * v.k, (y - v.y0) * v.k];
+    },
+    toLL: ([x, y]) => proj.toLL([x / v.k + v.x0, y / v.k + v.y0]),
+    k: v.k,
+    site,
+  };
+  const line = (ps: LatLon[]) => ps.map((p) => view.px(p).map((c) => c.toFixed(1)).join(",")).join(" ");
+  // newest brightest: FADE_STEPS pieces sharing their end points, opacity rising toward the car
+  const step = Math.max(1, Math.ceil(trail.length / FADE_STEPS));
+  const pieces = Array.from({ length: Math.ceil(trail.length / step) }, (_, i) => trail.slice(i * step, (i + 1) * step + 1));
+  const [tl, br] = site ? [view.px(site.topLeft), view.px(site.bottomRight)] : [];
+  const carAt = car && view.px(car);
+  const c = CAR[size];
   return (
-    <MapContainer
-      className="tv2-map"
-      center={carAt ?? VENUE.bounds?.[0] ?? [0, 0]}
-      zoom={TILE_ZOOMS.max}
-      maxZoom={MAP_MAX_ZOOM}
-      zoomSnap={0}
-      zoomControl={false}
-      attributionControl={false}
-      dragging={false}
-      scrollWheelZoom={false}
-      doubleClickZoom={false}
-      touchZoom={false}
-      boxZoom={false}
-      keyboard={false}
-      fadeAnimation={false}
-    >
-      <MapBackdrop frame={frame} />
-      <Fit pts={frame} pad={0.1} />
-      <Polyline positions={track} pathOptions={{ className: "tv2-map-track" }} />
-      {carAt && <Marker position={carAt} icon={carIcon} interactive={false} />}
-    </MapContainer>
+    <div className="tv2-map" ref={ref}>
+      <svg width={box.w} height={box.h}>
+        {site && tl && br && <image className="tv2-map-image" href={site.image} x={tl[0]} y={tl[1]} width={br[0] - tl[0]} height={br[1] - tl[1]} preserveAspectRatio="none" />}
+        <g className="tv2-map-lines">
+          {pieces.map((p, i) => p.length > 1 && <polyline key={i} className="tv2-map-trail" points={line(p)} opacity={0.12 + (0.88 * (i + 1)) / pieces.length} />)}
+        </g>
+        {children?.(view)}
+        {carAt && (
+          <g aria-hidden="true">
+            <circle className="tv2-map-ring" cx={carAt[0]} cy={carAt[1]} r={c.r + c.ring} />
+            <circle className="tv2-map-car" cx={carAt[0]} cy={carAt[1]} r={c.r} />
+          </g>
+        )}
+      </svg>
+    </div>
   );
 }

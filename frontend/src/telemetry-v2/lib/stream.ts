@@ -29,6 +29,18 @@ export function gpsTrace(s: Stream, from: number, to: number, max = 2000): LatLo
   return out;
 }
 
+/** Index of the first GPS fix at or after stream time `ts` (binary search; fixes arrive in time order). */
+export function gpsIndexAt(s: Stream, ts: number) {
+  const h = s.history.gps_latitude ?? [];
+  let [lo, hi] = [0, h.length];
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (h[mid][0] < ts) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+}
+
 // points at or after `from`, scaled for display
 export function windowed(h: Point[] = [], from: number, scale = 1): Point[] {
   let i = h.length;

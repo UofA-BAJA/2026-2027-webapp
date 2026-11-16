@@ -15,5 +15,5 @@ export function persisted<T>(key: string, fallback: T) {
       (l) => (listeners.add(l), () => listeners.delete(l)),
       () => value,
     );
-  return [use, set] as const;
+  return [use, set, () => value] as const; // the getter is for code outside React (the stream)
 }
