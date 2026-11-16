@@ -1,6 +1,6 @@
 // Map backgrounds for the GPS tile. Data only; the map is tiles/parts/TrackMap.tsx.
 // Source: USGS The National Map basemap services (imagery: USDA NAIP; topo: USGS topographic base map). Public domain,
-// no use restrictions; USGS asks for credit, shown as MAP_CREDIT in the map corner. See tracks/README.md.
+// no use restrictions; USGS asks for credit, shown as MAP_CREDIT in the map corner.
 
 export type MapBackground = "satellite" | "topo" | "contours" | "none";
 

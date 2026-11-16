@@ -32,7 +32,6 @@
   --on-alarm-track: rgba(255, 255, 255, 0.3); /* limit bar track on the red tile, emergency stop progress track */
   --pulse: #ffffff; /* the flash when a tile first goes over */
   --map-track: var(--chart-line); /* the trail the car left (last lap, or the whole run): the charts' line color, from config/theme.ts */
-  --map-course: rgba(255, 255, 255, 0.3); /* the venue's course as traced (config/venues.ts), under the track */
   --map-casing: rgba(0, 0, 0, 0.7); /* dark edge around map lines so they read on any satellite photo */
   --map-imagery: brightness(0.55) saturate(0.7); /* satellite tiles dimmed under the white lines and labels */
   --map-empty: #000000; /* map background: "none", offline, and outside the imagery */
@@ -41,12 +40,7 @@
   --map-contour: rgba(255, 255, 255, 0.2); /* contour lines (background "contours") */
   --map-contour-major: rgba(255, 255, 255, 0.45); /* every 5th contour */
   --fs-map-credit: 10px; /* the user asked for 10px here, under the usual 12px minimum */
-  --map-driven: #81ceeb; /* the part of the current lap already driven (medium, large) */
-  --map-line: #9a9a9a; /* split ticks and S1–S4 labels; start/finish is --value */
   --map-car: #ab0520; /* the car dot (Arizona Red is its identity here, not an alarm); its ring is --tile */
-  --time-ahead: #4fc27a; /* a lap or split time ahead of the average */
-  --time-behind: #d23a52; /* behind the average; white (--value) = nothing to compare yet */
-  --time-best: #81ceeb; /* best time in each column of the lap table */
 
   /* ---- header (the same in both themes) ---- */
   --brand-sky-top: #aa0722;
@@ -72,7 +66,6 @@
   --panel-band-button-border: rgba(255, 255, 255, 0.6);
   --silent-mark-outline: #3a5a8c;
   --panel-dim: rgba(255, 255, 255, 0.45); /* settings: options not chosen */
-  --panel-disabled: rgba(255, 255, 255, 0.2); /* settings: options not available yet */
   --panel-label: #8a8a8a; /* settings: caps labels and the footer */
   --panel-action: var(--chart-line); /* settings: actions (record new, import file, export), the charts' blue */
 
@@ -84,7 +77,6 @@
   --fs-body: 14px; /* tile labels and status, radio panel text */
   --fs-value-min: 12px; /* the big number shrinks between these two to fit its tile */
   --fs-value-max: 64px;
-  --fs-lap-value: 36px; /* the lap time on the small and medium GPS tiles, so the map keeps most of the tile */
   --value-weight: 400;
   --fs-pivot-active: 40px;
   --fs-pivot-near: 26px;

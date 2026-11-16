@@ -2,7 +2,7 @@
 // Imagery is downloaded ahead of time (no internet at the pits) with tools/venue_tiles.py into public/tiles/<id>/;
 // run it with the venue's `bounds`. See README.md ("Add a venue").
 
-import type { LatLon } from "./track.ts";
+import type { LatLon } from "../lib/stream.ts";
 
 export type Venue = {
   id: string; // the tiles folder: public/tiles/<id>/{z}/{x}/{y}.jpg

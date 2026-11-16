@@ -106,52 +106,10 @@
 .tv2-map-credit, .tv2-map-offline { position: absolute; bottom: 4px; z-index: 1000; pointer-events: none; }
 .tv2-map-credit { right: 6px; font-size: var(--fs-map-credit); color: var(--map-credit); }
 .tv2-map-offline { left: 6px; font-size: var(--fs-small); color: var(--tile-label); }
-.tv2-map .tv2-map-course { stroke: var(--map-course); stroke-width: 6; }
 .tv2-map .tv2-map-track { stroke: var(--map-track); }
-.tv2-map .tv2-map-driven { stroke: var(--map-driven); }
-.tv2-map .tv2-map-tick { stroke: var(--map-line); stroke-width: 3; }
-.tv2-map .tv2-map-tick.sf { stroke: var(--value); }
-.tv2-map-label { color: var(--map-line); font-size: var(--fs-small); text-align: center; line-height: 16px; text-shadow: 0 0 2px var(--map-casing); pointer-events: none; }
 .tv2-map-car { border-radius: 50%; background: var(--map-car); border: 2px solid var(--tile); box-sizing: border-box; }
 .tv2-map-car.large { border-width: 3px; }
 .tv2-stale .tv2-map-car { border-color: var(--stale-tile); }
-/* time colors, from timeTone() in lib/laps.ts */
-.tv2-ahead { color: var(--time-ahead); }
-.tv2-behind { color: var(--time-behind); }
-.tv2-best { color: var(--time-best); }
-.tv2-lap { flex: 1; min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
-.tv2 .tv2-lap .tv2-reading { flex: none; align-self: stretch; margin-top: 0; }
-/* the lap time leaves the map most of the tile: smaller than a channel's number, and on medium it fits the left half */
-.tv2 .tv2-lap .tv2-value { font-size: clamp(var(--fs-value-min), calc((100cqw - var(--tv2-unit, 0px)) / (var(--tv2-chars, 4) * 0.62)), var(--fs-lap-value)); }
-.tv2 .tv2-lap-medium .tv2-value { font-size: clamp(var(--fs-value-min), calc((30cqw - var(--tv2-unit, 0px)) / (var(--tv2-chars, 4) * 0.62)), var(--fs-lap-value)); }
-.tv2 .tv2-lap-large .tv2-value { font-size: clamp(var(--fs-value-min), calc((70cqw - var(--tv2-unit, 0px)) / (var(--tv2-chars, 4) * 0.62)), var(--fs-value-max)); }
-.tv2-lap-delta { font-family: var(--font-mono); font-size: var(--fs-unit); color: var(--value); }
-.tv2-lap-delta.tv2-ahead { color: var(--time-ahead); }
-.tv2-lap-delta.tv2-behind { color: var(--time-behind); }
-.tv2-lap-sub { margin-top: 4px; font-size: var(--fs-small); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
-/* medium: lap time bottom-left, the map at full height in the middle, split times on the right */
-.tv2 .tv2-lap-medium { flex-direction: row; gap: 14px; }
-.tv2 .tv2-lap-medium .tv2-reading { align-self: flex-end; }
-.tv2-splits { flex: none; display: grid; grid-template-columns: auto auto 5ch; align-content: center; align-items: center; gap: 6px 8px; font-family: var(--font-mono); font-size: var(--fs-small); font-variant-numeric: tabular-nums; color: var(--value); }
-.tv2-split { display: contents; }
-.tv2-split-name { color: var(--tile-label); }
-.tv2-split-time, .tv2-split-delta { text-align: right; }
-/* large: map, the lap table, then the lap time with best and average */
-.tv2-lap-large .tv2-map { min-height: 50%; } /* the table scrolls before the map shrinks past half */
-.tv2-laps-wrap { flex: 0 1 auto; min-height: 0; overflow: auto; }
-.tv2-laps { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: var(--fs-small); font-variant-numeric: tabular-nums; color: var(--text); }
-.tv2-laps th, .tv2-laps td { padding: 2px 6px; text-align: right; white-space: nowrap; }
-.tv2-laps th:first-child, .tv2-laps td:first-child { text-align: left; color: var(--tile-label); }
-.tv2-laps th { position: sticky; top: 0; background: var(--tile); color: var(--tile-label); font-weight: 400; }
-.tv2-laps tfoot td { position: sticky; bottom: 0; background: var(--tile); border-top: 1px solid var(--divider); padding-top: 4px; color: var(--muted); }
-.tv2-laps .tv2-live td { color: var(--value); }
-.tv2-laps .tv2-live td.tv2-ahead { color: var(--time-ahead); }
-.tv2-laps .tv2-live td.tv2-behind { color: var(--time-behind); }
-.tv2-laps td.tv2-best { color: var(--time-best); }
-.tv2-lap-foot { display: flex; align-items: flex-end; gap: 12px; }
-.tv2 .tv2-lap-foot .tv2-reading { flex: 1; min-width: 0; }
-.tv2-lap-stats { flex: none; text-align: right; font-size: var(--fs-small); line-height: 1.5; color: var(--tile-label); }
-.tv2-lap-stats span { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--text); }
 /* medium: number bottom-left, small line chart filling the right */
 .tv2-medium { flex: 1; min-height: 0; display: flex; align-items: stretch; gap: 12px; }
 .tv2-medium .tv2-reading { flex: none; align-self: flex-end; }
@@ -258,28 +216,13 @@
 .tv2-page-title { margin-bottom: 4px; font-size: var(--fs-small); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; line-height: 1.2; color: var(--panel-text); }
 .tv2-page-subtitle { margin: 0; font-size: var(--fs-page-subtitle); font-weight: 300; line-height: 1; color: var(--panel-text); }
 .tv2-settings > * { flex: none; }
-.tv2-settings > h3, .tv2-settings > .tv2-settings-foot { flex: 0 1 calc(1.3em + 14px); min-height: calc(1.3em + 2px); display: flex; align-items: flex-end; }
 .tv2-settings h3 { margin: 0; font-size: var(--fs-panel-heading); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; line-height: 1.3; color: var(--panel-label); }
 /* gaps between options shrink from 18px to 8px with the tile's width (cqw), so the three track actions (~336px of
    text) stay on one line down to the smallest 2x2 tile (~355px wide inside) before anything wraps */
 .tv2-settings-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0 clamp(8px, calc(50cqw - 170px), 18px); }
 .tv2-settings button { font: inherit; font-weight: 300; line-height: 1.15; padding: 0; border: 0; background: none; cursor: pointer; text-align: left; }
-.tv2-settings .tv2-settings-mode { font-size: var(--fs-settings-option); color: var(--panel-dim); }
 .tv2-settings .tv2-settings-mode.on { color: var(--panel-text); }
-.tv2-settings .tv2-settings-mode.off { color: var(--panel-disabled); cursor: default; }
 .tv2-settings .tv2-settings-action { font-size: var(--fs-settings-action); color: var(--panel-text); }
-.tv2-settings .tv2-settings-action.tv2-act { color: var(--panel-action); } /* actions, not choices */
 .tv2-settings button:not(:disabled):active { opacity: 0.6; }
-.tv2-settings .tv2-settings-action:disabled { color: var(--panel-disabled); cursor: default; } /* "(doesn't work yet)" */
 /* an option with a small hint under it ("coming later", "doesn't work yet") */
-.tv2-settings-opt { display: flex; flex-direction: column; align-items: flex-start; }
 /* width 0 + nowrap: the hint hangs to the right under its neighbours instead of widening the row and wrapping it */
-.tv2-settings-hint { width: 0; white-space: nowrap; font-size: var(--fs-small); line-height: 1.1; color: var(--panel-label); }
-.tv2-settings-list { display: flex; flex-direction: column; align-items: flex-start; }
-.tv2-settings .tv2-settings-track { font-size: var(--fs-settings-action); color: var(--panel-dim); }
-.tv2-settings .tv2-settings-track.on { color: var(--panel-text); }
-.tv2-settings-save { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; margin: 2px 0 4px; }
-.tv2-settings-save input { flex: 1 1 160px; min-width: 0; font: inherit; font-size: var(--fs-body); color: var(--panel-text); background: var(--panel-bg); border: 0; border-bottom: 2px solid var(--panel-dim); padding: 4px 0; }
-.tv2-settings-save input:focus { outline: none; border-bottom-color: var(--panel-text); }
-.tv2-settings-note { margin: 6px 0 0; font-size: var(--fs-small); color: var(--panel-soft); }
-.tv2-settings-foot { margin: 0; font-size: var(--fs-small); line-height: 1.3; color: var(--panel-label); }

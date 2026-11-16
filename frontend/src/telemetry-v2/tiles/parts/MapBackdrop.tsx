@@ -2,7 +2,7 @@ import L from "leaflet";
 import { useEffect, useRef, useState } from "react";
 import { TileLayer, useMap } from "react-leaflet";
 import { BACKGROUNDS, MAP_CREDIT, MAP_MAX_ZOOM, OFFLINE_AFTER_ERRORS, ONLINE_MAX_ZOOM } from "../../config/map";
-import type { LatLon } from "../../config/track";
+import type { LatLon } from "../../lib/stream";
 import { TILE_ZOOMS, VENUE } from "../../config/venues";
 import { useMapBackground } from "../../hooks/useMapBackground";
 import { ContourLayer, hasContours } from "./ContourLayer";

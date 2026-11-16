@@ -22,6 +22,3 @@ export const lapTime = (s: number) => {
   const sec = ((t % 600) / 10).toFixed(1);
   return m ? `${m}:${sec.padStart(4, "0")}` : sec;
 };
-
-// a time difference with its sign: "−0.7", "+1.1" (a real minus sign, so it lines up with the plus)
-export const deltaTime = (d: number) => `${d < 0 ? "−" : "+"}${Math.abs(d).toFixed(1)}`;

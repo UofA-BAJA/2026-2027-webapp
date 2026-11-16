@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Pane, Polyline } from "react-leaflet";
-import type { LatLon } from "../../config/track";
+import type { LatLon } from "../../lib/stream";
 
 // The "contours" map background: elevation lines on black, from src/telemetry-v2/contours/*.geojson (generated from
 // USGS elevation files by plugins/contours.ts). Loaded only when this background is picked; works offline.
