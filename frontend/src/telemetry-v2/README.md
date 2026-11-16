@@ -50,7 +50,7 @@ Drop an image and a small `.json` with its corner lat/lon in `maps/`. `maps/READ
 
 ### Time laps (the lap box)
 The car only sends lat/lon. Open the GPS tile fullscreen: the first time at a site it asks **set up a lap box?** (**not now** is remembered per site), or tap **lap box** in the app bar.
-1. The box drops on the car (or in the middle of the view, if you've dragged the map), 20 × 20 m (`config/laps.ts`), with the whole site in view. Zoom in on the start/finish, drag the box across it, drag a corner to resize, then **done**. **reset** puts it back on the car at 20 × 20 m. Corner handles show once the box is big enough on screen.
+1. The box drops on the car (or in the middle of the view, if you've dragged the map), 50 × 50 m (`config/laps.ts`), with the whole site in view. Zoom in on the start/finish, drag the box across it, drag a corner to resize, then **done**. **reset** puts it back on the car at that size. Corner handles show once the box is big enough on screen.
 2. Every time the car drives into the box, a new lap starts. Entering again within 20 s doesn't count (`reentrySeconds`), so GPS wandering at the edge can't add laps.
 3. **edit box** / **clear box** change it later. The box is saved per site in this browser.
 

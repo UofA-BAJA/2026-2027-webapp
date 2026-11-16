@@ -1,18 +1,20 @@
 // Self-check for lapBox.ts. Run from frontend/: node --experimental-strip-types src/telemetry-v2/lib/lapBox.check.ts
 import assert from "node:assert/strict";
+import { LAPS } from "../config/laps.ts";
 import { boxAround, detectLap, lapStats, normalized } from "./lapBox.ts";
 import { runCsv, type LatLon, type Stream } from "./stream.ts";
 
 const newStream = () => ({ latest: {}, history: {}, at: {} }) as unknown as Stream;
 const near = (a: number | undefined, b: number, tol: number, msg: string) => assert.ok(a !== undefined && Math.abs(a - b) <= tol, `${msg}: ${a} vs ${b}`);
 
-// a 100 m circle at 10 Hz; the 20 × 20 m box sits across it at angle 0 (the east side)
+// a 100 m circle at 10 Hz; the default box sits across it at angle 0 (the east side)
 const R = 100;
 const at = (th: number, r = R): LatLon => [32 + (r * Math.sin(th)) / 110540, -111 + (r * Math.cos(th)) / (111320 * Math.cos((32 * Math.PI) / 180))];
 const box = boxAround(at(0));
 
-// boxAround: 20 m each way
-near((box.maxLat - box.minLat) * 110540, 20, 0.01, "box height");
+const half = LAPS.boxSizeM.height / 2;
+// boxAround: the configured size
+near((box.maxLat - box.minLat) * 110540, LAPS.boxSizeM.height, 0.01, "box height");
 
 // three passes = three laps, 60 s apart; the lap starts where the car crosses the box edge, between fixes
 const s = newStream();
@@ -22,8 +24,8 @@ for (let th = -0.5; th < 3 * 2 * Math.PI - 0.5; th += ((2 * Math.PI) / lapSecs) 
 const laps = s.history.lap;
 assert.equal(laps.length, 3, `3 passes = 3 laps, got ${laps.length}`);
 assert.deepEqual(laps.map((l) => l[1]), [1, 2, 3]);
-// the box edge is 10 m before angle 0 along the circle: θ = −asin(10/R); lap 1 enters there
-near(laps[0][0], 0.037 + ((0.5 - Math.asin(10 / R)) / (2 * Math.PI)) * lapSecs, 0.02, "lap 1 starts at the box edge");
+// the box's south edge is half its height below angle 0: θ = −asin(half/R); lap 1 enters there
+near(laps[0][0], 0.037 + ((0.5 - Math.asin(half / R)) / (2 * Math.PI)) * lapSecs, 0.02, "lap 1 starts at the box edge");
 near(laps[1][0] - laps[0][0], lapSecs, 0.02, "lap time");
 const st = lapStats(s, laps[2][0] + 5);
 assert.equal(st.lap, 3);
