@@ -50,13 +50,13 @@ Drop an image and a small `.json` with its corner lat/lon in `maps/`. `maps/READ
 
 ### Time laps (the lap box)
 The car only sends lat/lon. Open the GPS tile fullscreen: the first time at a site it asks **set up a lap box?** (**not now** is remembered per site), or tap **lap box** in the app bar.
-1. The box drops on the car, 20 × 20 m (`config/laps.ts`). Drag it across the start/finish, drag a corner to resize, then **done**.
+1. The box drops on the car (or in the middle of the view, if you've dragged the map), 20 × 20 m (`config/laps.ts`), with the whole site in view. Zoom in on the start/finish, drag the box across it, drag a corner to resize, then **done**. Corner handles show once the box is big enough on screen.
 2. Every time the car drives into the box, a new lap starts. Entering again within 20 s doesn't count (`reentrySeconds`), so GPS wandering at the edge can't add laps.
 3. **edit box** / **clear box** change it later. The box is saved per site in this browser.
 
 **done** also sends the box to the car (`SET_LAP_BOX` in `config/radio.ts`, a placeholder ID until it's in the firmware's `Commands.h`). Until the car can report laps, this page detects them itself: `detectLap()` in `lib/lapBox.ts` is the one function to replace. Laps go into the run data as the `lap` series, so **export csv** in the radio panel includes them.
 
-Zoom the fullscreen map with the mouse wheel, a trackpad pinch, or the + − **fit** buttons. Zoomed in, it follows the car.
+Fullscreen map: the mouse wheel or a trackpad pinch zooms toward the pointer, + − zoom in and out, dragging the map pans it, and **fit** goes back to showing everything. Zoomed in without dragging, it follows the car.
 
 ### Rename a preset or add a header control
 Just do it. The header measures the logo, the preset names and the controls, and picks the richest layout that fits (five names centered, three centered, three next to the logo, or only the active name). There are no breakpoints to update.

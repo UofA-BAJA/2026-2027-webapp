@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { getLapBoxes, saveLapBox, setPromptDismissed, useLapBoxes, usePromptDismissed } from "../hooks/useLapBox";
 import { getSiteChoice, siteFor, siteKey, useSiteChoice } from "../hooks/useSite";
 import { lapTime, miles, mph } from "../lib/format";
@@ -6,7 +6,7 @@ import { runStats } from "../lib/geo";
 import { boxAround, lapStats, normalized, type Box } from "../lib/lapBox";
 import { gpsTrace, type LatLon, type Stream } from "../lib/stream";
 import { Glyph } from "./parts/RoundButton";
-import { TrackMap, type MapView } from "./parts/TrackMap";
+import { clampZoom, TrackMap, type MapView } from "./parts/TrackMap";
 import type { Size } from "./registry";
 import type { TileBodyProps } from "./types";
 
@@ -36,52 +36,66 @@ export function gpsLabel(s: Stream, size: Size) {
 }
 
 type Corner = "nw" | "ne" | "sw" | "se";
+const HANDLES_FROM = 40; // px: smaller than this on screen, the box shows no corner handles
 
 // The box: diagonal red slashes, no outline. The slashes are a pattern in screen pixels, so they stay 4 px apart at
 // any zoom. Editing (onChange given) adds corner handles, the "lap box" label, and dragging: move, or resize from a
 // corner. Always north-up.
 function LapBox({ v, box, onChange }: { v: MapView; box: Box; onChange?: (b: Box) => void }) {
   const hatch = useId();
-  const drag = useRef<{ what: "move" | Corner; from: LatLon; box: Box }>(undefined);
+  const latest = useRef(onChange); // the box re-renders every frame; the drag calls the newest onChange
+  latest.current = onChange;
   const [x0, y0] = v.px([box.maxLat, box.minLon]);
   const [x1, y1] = v.px([box.minLat, box.maxLon]);
-  const at = (e: React.PointerEvent<SVGElement>) => {
-    const r = e.currentTarget.ownerSVGElement!.getBoundingClientRect();
-    return v.toLL([e.clientX - r.left, e.clientY - r.top]);
-  };
+  // A drag follows the pointer on the window, with the view and the map's position as they were when it started, so
+  // the re-rendering box under the pointer can't lose or re-base it.
   const grab = (what: "move" | Corner) => (e: React.PointerEvent<SVGElement>) => {
-    e.stopPropagation();
-    e.currentTarget.setPointerCapture(e.pointerId);
-    drag.current = { what, from: at(e), box };
+    if (e.button !== 0) return;
+    e.stopPropagation(); // not a map pan
+    e.preventDefault();
+    const r = e.currentTarget.ownerSVGElement!.getBoundingClientRect();
+    const toLL = v.toLL;
+    const at = (ev: PointerEvent | React.PointerEvent): LatLon => toLL([ev.clientX - r.left, ev.clientY - r.top]);
+    const [from, start] = [at(e), box];
+    const move = (ev: PointerEvent) => {
+      const [la, lo] = at(ev);
+      if (what === "move") {
+        const [dLat, dLon] = [la - from[0], lo - from[1]];
+        return latest.current?.({ minLat: start.minLat + dLat, maxLat: start.maxLat + dLat, minLon: start.minLon + dLon, maxLon: start.maxLon + dLon });
+      }
+      const b = { ...start };
+      if (what[0] === "n") b.maxLat = la;
+      else b.minLat = la;
+      if (what[1] === "w") b.minLon = lo;
+      else b.maxLon = lo;
+      latest.current?.(normalized(b));
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
   };
-  const move = (e: React.PointerEvent<SVGElement>) => {
-    const d = drag.current;
-    if (!d || !onChange) return;
-    const [la, lo] = at(e);
-    if (d.what === "move") {
-      const [dLat, dLon] = [la - d.from[0], lo - d.from[1]];
-      return onChange({ minLat: d.box.minLat + dLat, maxLat: d.box.maxLat + dLat, minLon: d.box.minLon + dLon, maxLon: d.box.maxLon + dLon });
-    }
-    const b = { ...d.box };
-    if (d.what[0] === "n") b.maxLat = la;
-    else b.minLat = la;
-    if (d.what[1] === "w") b.minLon = lo;
-    else b.maxLon = lo;
-    onChange(normalized(b));
-  };
-  const drop = () => void (drag.current = undefined);
   const edit = !!onChange;
+  // corner handles only once the box is big enough on screen to grab them apart from the box itself; zoomed out
+  // (placing starts from the whole site) any drag on it moves it
+  const roomy = x1 - x0 >= HANDLES_FROM && y1 - y0 >= HANDLES_FROM;
   const handles: [Corner, number, number][] = [["nw", x0, y0], ["ne", x1, y0], ["sw", x0, y1], ["se", x1, y1]];
   return (
-    <g className={`tv2-lapbox${edit ? " editing" : ""}`} onPointerMove={move} onPointerUp={drop} onPointerCancel={drop}>
+    <g className={`tv2-lapbox${edit ? " editing" : ""}`}>
       <defs>
         <pattern id={hatch} patternUnits="userSpaceOnUse" width="4" height="4" patternTransform="rotate(45)">
           <line className="tv2-lapbox-slash" x1="0" y1="0" x2="0" y2="4" />
         </pattern>
       </defs>
       <rect x={x0} y={y0} width={x1 - x0} height={y1 - y0} fill={`url(#${hatch})`} onPointerDown={edit ? grab("move") : undefined} />
+      {/* a tiny box (zoomed out) gets a finger-sized invisible target, so it can still be picked up */}
+      {edit && !roomy && <circle cx={(x0 + x1) / 2} cy={(y0 + y1) / 2} r={18} fill="transparent" onPointerDown={grab("move")} />}
       <text className="tv2-lapbox-label" x={edit ? (x0 + x1) / 2 : x0} y={y0 - 8}>{edit ? "lap box" : "lap"}</text>
-      {edit && handles.map(([c, x, y]) => (
+      {edit && roomy && handles.map(([c, x, y]) => (
         <g key={c} className="tv2-lapbox-handle" onPointerDown={grab(c)}>
           <circle cx={x} cy={y} r={18} fill="transparent" />
           <circle cx={x} cy={y} r={7} />
@@ -127,36 +141,18 @@ function AppButton({ glyph, label, onClick, primary, disabled }: AppButtonProps)
   );
 }
 
-const ZOOM_MAX = 40; // × the fit-everything view
-const clampZoom = (z: number) => Math.min(ZOOM_MAX, Math.max(1, z));
-
-// Wheel or trackpad pinch over `ref` zooms. A native listener, because React's wheel listener is passive and can't stop
-// the page from scrolling (or the browser from zooming on a pinch).
-function useWheelZoom(ref: React.RefObject<HTMLElement | null>, setZoom: React.Dispatch<React.SetStateAction<number>>) {
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const wheel = (e: WheelEvent) => {
-      e.preventDefault();
-      e.stopPropagation(); // not a preset swipe
-      setZoom((z) => clampZoom(z * Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0025)))); // ctrlKey: a trackpad pinch
-    };
-    el.addEventListener("wheel", wheel, { passive: false });
-    return () => el.removeEventListener("wheel", wheel);
-  }, [ref, setZoom]);
-}
-
-// fullscreen: the map with the site name and run distance, zoom (wheel, pinch, or + − fit), the lap readout, the "set up a lap box?" band the first
+// fullscreen: the map with the site name and run distance, zoom (wheel, pinch, or + − fit) and drag to pan, the lap readout, the "set up a lap box?" band the first
 // time per site, and the app bar that places, edits and clears the box
 export function GpsFull({ s }: TileBodyProps) {
   const { car, site, key, box } = useSiteBox(s);
   const dismissed = usePromptDismissed();
-  const [edit, setEdit] = useState<{ draft: Box; frame: LatLon[] }>(); // frame: the view holds still while dragging
+  const [edit, setEdit] = useState<{ draft: Box }>();
   const [note, setNote] = useState("");
   const [zoom, setZoom] = useState(1);
-  const stage = useRef<HTMLDivElement>(null);
-  useWheelZoom(stage, setZoom);
-  const startEdit = (b: Box) => setEdit({ draft: b, frame: corners(b) });
+  const [center, setCenter] = useState<LatLon>(); // set by dragging the map; fit lets go of it
+  const dropAt = center ?? car; // a new box lands in the middle of the view once it's been dragged, else on the car
+  // placing starts from the whole site image (or the whole trail); zoom in to put the box exactly on the line
+  const startEdit = (b: Box) => (setEdit({ draft: b }), setZoom(1), setCenter(undefined));
   const done = async () => {
     const b = edit!.draft;
     setEdit(undefined);
@@ -175,14 +171,15 @@ export function GpsFull({ s }: TileBodyProps) {
           <h4>set up a lap box?</h4>
           <p>Drop a box across the start/finish: each time the car drives into it, a new lap starts.</p>
           <div className="tv2-band-buttons">
-            <button type="button" className="tv2-band-btn primary" disabled={!car} onClick={() => car && startEdit(boxAround(car))}>set up</button>
+            <button type="button" className="tv2-band-btn primary" disabled={!dropAt} onClick={() => dropAt && startEdit(boxAround(dropAt))}>set up</button>
             <button type="button" className="tv2-band-btn" onClick={() => setPromptDismissed({ ...dismissed, [key]: true })}>not now</button>
           </div>
         </div>
       )}
-      <div className="tv2-gps-stage" ref={stage}>
-        <TrackMap s={s} size="full" keep={shown ? corners(shown) : []} fitTo={edit?.frame} zoom={zoom}>
-          {(v) => shown && <LapBox v={v} box={shown} onChange={edit ? (d) => setEdit({ ...edit, draft: d }) : undefined} />}
+      <div className="tv2-gps-stage">
+        <TrackMap s={s} size="full" keep={shown ? corners(shown) : []} hold={!!edit || zoom > 1 || !!center} frameSite={!!edit} followCar={!edit} zoom={zoom} center={center} onPan={setCenter}
+          onZoom={(z, c) => (setZoom(z), setCenter(c))}>
+          {(v) => shown && <LapBox v={v} box={shown} onChange={edit ? (d) => setEdit({ draft: d }) : undefined} />}
         </TrackMap>
         <div className="tv2-gps-head">
           <div className="tv2-gps-title">GPS · {site?.name ?? "no map"}</div>
@@ -192,7 +189,7 @@ export function GpsFull({ s }: TileBodyProps) {
         <div className="tv2-gps-zoom">
           <button type="button" aria-label="Zoom in" title="Zoom in" onClick={() => setZoom((z) => clampZoom(z * 1.6))}>+</button>
           <button type="button" aria-label="Zoom out" title="Zoom out" disabled={zoom <= 1} onClick={() => setZoom((z) => clampZoom(z / 1.6))}>−</button>
-          <button type="button" aria-label="Fit everything" title="Fit everything" disabled={zoom <= 1} onClick={() => setZoom(1)}>fit</button>
+          <button type="button" aria-label="Fit everything" title="Fit everything" disabled={zoom <= 1 && !center} onClick={() => (setZoom(1), setCenter(undefined))}>fit</button>
         </div>
         {edit && <div className="tv2-gps-hint">drag to move · drag a corner to resize · drop it across the start/finish</div>}
         {box && !edit && (
@@ -215,7 +212,7 @@ export function GpsFull({ s }: TileBodyProps) {
             <AppButton glyph="delete" label="clear box" onClick={() => saveLapBox(key, undefined)} />
           </>
         ) : (
-          <AppButton glyph="lapBox" label="lap box" disabled={!car} onClick={() => car && startEdit(boxAround(car))} />
+          <AppButton glyph="lapBox" label="lap box" disabled={!dropAt} onClick={() => dropAt && startEdit(boxAround(dropAt))} />
         )}
       </div>
     </div>

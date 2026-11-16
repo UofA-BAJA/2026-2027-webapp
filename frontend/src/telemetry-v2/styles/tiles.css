@@ -15,8 +15,9 @@
   transition: transform 120ms;
 }
 /* not when the press is on a control: the tilt would slide the button out from under the pointer before release,
-   and the browser drops a click that ends off the button (the size button needed several tries) */
-.tv2-tile:active:not(:has(button:active, select:active, .tv2-settings)) {
+   and the browser drops a click that ends off the button (the size button needed several tries). :where() keeps this
+   rule's specificity at .tv2-tile:active, so fullscreen (grid.css) and reduced motion (motion.css) still turn it off */
+.tv2-tile:active:where(:not(:has(button:active, select:active, .tv2-settings))) {
   transform: perspective(600px) rotateX(var(--tv2-tilt-x, 0deg)) rotateY(var(--tv2-tilt-y, 0deg)) scale(0.97);
 }
 /* staggered entry; fill-mode backwards so :active's scale still works afterwards */
@@ -101,6 +102,7 @@
 .tv2-map-ring { fill: var(--tile); }
 .tv2-stale .tv2-map-ring { fill: var(--stale-tile); }
 .tv2-map-car { fill: var(--map-car); }
+.tv2-map-ring, .tv2-map-car { pointer-events: none; } /* presses go through to the lap box or the map under the car */
 /* the lap box (tiles/GpsTile.tsx): slashes from an SVG pattern in screen px, no outline */
 .tv2-lapbox-slash { stroke: var(--lap-box); stroke-width: 1; }
 .tv2-lapbox-label { font-size: var(--fs-small); fill: var(--lap-label); }
@@ -120,7 +122,9 @@
 /* fullscreen GPS: the only fullscreen with an app bar */
 .tv2-gps-full { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .tv2-gps-stage { flex: 1; min-height: 0; position: relative; display: flex; }
-.tv2-gps-full .tv2-map svg { touch-action: none; } /* dragging the box mustn't scroll the page */
+.tv2-gps-full .tv2-map svg { touch-action: none; } /* dragging the map or the box mustn't scroll the page */
+.tv2-map svg.pannable { cursor: grab; }
+.tv2-map svg.pannable:active { cursor: grabbing; }
 .tv2-gps-head, .tv2-gps-hint, .tv2-gps-lap { position: absolute; pointer-events: none; text-shadow: 0 0 3px var(--map-casing), 0 0 1px var(--map-casing); }
 .tv2-gps-head { top: 12px; left: 14px; font-size: var(--fs-body); color: var(--text); font-variant-numeric: tabular-nums; }
 .tv2-gps-title { margin-bottom: 2px; font-size: var(--fs-small); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--value); }
