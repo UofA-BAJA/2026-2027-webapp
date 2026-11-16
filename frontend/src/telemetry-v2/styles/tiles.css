@@ -113,8 +113,9 @@
 .tv2-lapbox-handle:nth-of-type(2), .tv2-lapbox-handle:nth-of-type(3) { cursor: nesw-resize; }
 /* medium with a box: map over the lap time on the left, last / best / distance on the right */
 .tv2-gps-medium { flex: 1; min-height: 0; display: flex; gap: 14px; }
-.tv2-gps-left { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
-.tv2 .tv2-gps-left .tv2-reading { flex: none; align-self: stretch; margin-top: 0; }
+.tv2-gps-left { flex: 1 1 0; min-width: 0; position: relative; display: flex; }
+/* the lap time sits on the map's bottom-left corner, so the map gets the whole height */
+.tv2 .tv2-gps-left .tv2-reading { position: absolute; left: 8px; bottom: 6px; margin: 0; pointer-events: none; text-shadow: 0 0 3px var(--map-casing), 0 0 1px var(--map-casing); }
 .tv2 .tv2-gps-medium .tv2-value { font-size: clamp(var(--fs-value-min), calc(40cqw / (var(--tv2-chars, 4) * 0.62)), var(--fs-lap-value)); }
 .tv2-gps-stats { flex: none; margin: 0; display: flex; flex-direction: column; justify-content: center; gap: 10px; }
 .tv2-gps-stats dt { font-size: var(--fs-small); color: var(--tile-label); }

@@ -11,6 +11,7 @@ import { gpsIndexAt, gpsTrace, type LatLon, type Stream } from "../../lib/stream
 // has been zoomed or dragged) so nothing slides under the pointer as the trail grows. zoom > 1 zooms in on the car and
 // follows it; `center` (set by dragging the map, or by zooming toward the pointer) pins the middle of the view instead.
 // `frameSite` fits the whole site image instead of the trail (placing the lap box starts there; zoom in from it).
+// With a site image, the view is kept inside the photo so it always fills the map.
 
 const CAR = { small: { r: 4, ring: 2 }, medium: { r: 5, ring: 2 }, full: { r: 7, ring: 3 } }; // px
 const TRAIL_POINTS = 1500; // most trail points drawn; a longer trail is thinned (every nth fix)
@@ -79,6 +80,20 @@ export function TrackMap({ s, size, keep = [], children, zoom = 1, hold, frameSi
     v.k *= zoom;
     v.x0 = cx - box.w / 2 / v.k;
     v.y0 = cy - box.h / 2 / v.k;
+  }
+  if (site) {
+    // the photo always fills the map: never zoomed out past it, never past its edges (no black bars)
+    const [ix0, iy0] = proj.toM(site.topLeft);
+    const [ix1, iy1] = proj.toM(site.bottomRight);
+    const cover = Math.max(box.w / (ix1 - ix0), box.h / (iy1 - iy0));
+    if (v.k < cover) {
+      const [cx, cy] = [v.x0 + box.w / 2 / v.k, v.y0 + box.h / 2 / v.k];
+      v.k = cover;
+      v.x0 = cx - box.w / 2 / v.k;
+      v.y0 = cy - box.h / 2 / v.k;
+    }
+    v.x0 = Math.min(Math.max(v.x0, ix0), ix1 - box.w / v.k);
+    v.y0 = Math.min(Math.max(v.y0, iy0), iy1 - box.h / v.k);
   }
   const view: MapView = {
     px: (p) => {

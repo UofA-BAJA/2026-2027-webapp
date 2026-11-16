@@ -113,10 +113,18 @@ function LapBox({ v, box, onChange }: { v: MapView; box: Box; onChange?: (b: Box
   );
 }
 
-// small: map + trail
-export const GpsSmall = ({ s }: TileBodyProps) => <TrackMap s={s} size="small" />;
+// small: map + trail, and the lap box when there is one
+export function GpsSmall({ s }: TileBodyProps) {
+  const { box } = useSiteBox(s);
+  return (
+    <TrackMap s={s} size="small" keep={box ? corners(box) : []}>
+      {(v) => box && <LapBox v={v} box={box} />}
+    </TrackMap>
+  );
+}
 
-// medium: with a box, the map on the left over the big lap time, last / best / distance on the right
+// medium: with a box, the map filling the left with the big lap time over its bottom-left corner, last / best /
+// distance on the right
 export function GpsMedium({ s }: TileBodyProps) {
   const { box } = useSiteBox(s);
   if (!box) return <TrackMap s={s} size="medium" />;
