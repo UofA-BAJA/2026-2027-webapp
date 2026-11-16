@@ -1,9 +1,10 @@
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { getLapBoxes, saveLapBox, setPromptDismissed, useLapBoxes, usePromptDismissed } from "../hooks/useLapBox";
 import { getSiteChoice, siteFor, siteKey, useSiteChoice } from "../hooks/useSite";
 import { lapTime, miles, mph } from "../lib/format";
 import { runStats } from "../lib/geo";
-import { boxAround, lapStats, normalized, type Box } from "../lib/lapBox";
+import { LAPS } from "../config/laps";
+import { boxAround, boxSizeM, lapStats, normalized, type Box } from "../lib/lapBox";
 import { gpsTrace, type LatLon, type Stream } from "../lib/stream";
 import { Glyph } from "./parts/RoundButton";
 import { clampZoom, TrackMap, type MapView } from "./parts/TrackMap";
@@ -101,7 +102,7 @@ function LapBox({ v, box, onChange }: { v: MapView; box: Box; onChange?: (b: Box
       <rect x={x0} y={y0} width={x1 - x0} height={y1 - y0} fill={`url(#${hatch})`} onPointerDown={edit ? grab("move") : undefined} />
       {/* a tiny box (zoomed out) gets a finger-sized invisible target, so it can still be picked up */}
       {edit && !roomy && <circle cx={(x0 + x1) / 2} cy={(y0 + y1) / 2} r={GRAB_R} fill="transparent" onPointerDown={grab("move")} />}
-      <text className="tv2-lapbox-label" x={edit ? (x0 + x1) / 2 : x0} y={y0 - 8}>{edit ? "lap box" : "lap"}</text>
+      <text className="tv2-lapbox-label" x={edit ? (x0 + x1) / 2 : x0} y={y0 - 8}>{edit ? `lap box · ${boxSizeM(box).map(Math.round).join(" × ")} m` : "lap"}</text>
       {edit && roomy && handles.map(([c, x, y]) => (
         <g key={c} className="tv2-lapbox-handle" onPointerDown={grab(c)}>
           <circle cx={x} cy={y} r={GRAB_R} fill="transparent" />
@@ -153,7 +154,18 @@ function AppButton({ glyph, label, onClick, primary, disabled }: AppButtonProps)
 export function GpsFull({ s }: TileBodyProps) {
   const { car, site, key, box } = useSiteBox(s);
   const dismissed = usePromptDismissed();
-  const [edit, setEdit] = useState<{ draft: Box }>();
+  // editing: `at` is where a new box goes. While `fresh` (nothing touched yet) its size follows the view so it's always
+  // boxScreenPx across, even as the map settles (the band above it closing); dragging, zooming or panning keeps it as is
+  const [edit, setEdit] = useState<{ at: LatLon; draft?: Box; fresh?: boolean; k?: number }>();
+  const viewK = useRef(0); // px per metre of the map as last drawn
+  useEffect(() => {
+    const k = viewK.current;
+    if (edit?.fresh && k && k !== edit.k) {
+      const m = LAPS.boxScreenPx / k;
+      setEdit({ ...edit, k, draft: boxAround(edit.at, m, m) });
+    }
+  });
+  const touched = () => edit?.fresh && setEdit({ ...edit, fresh: false });
   const [note, setNote] = useState("");
   const [zoom, setZoom] = useState(1);
   const [center, setCenter] = useState<LatLon>(); // set by dragging the map; fit lets go of it
@@ -161,13 +173,15 @@ export function GpsFull({ s }: TileBodyProps) {
   // + and −: around the car, or around the box while placing it (the view starts on the whole site, so zooming its
   // middle would push the box off screen)
   const zoomBy = (f: number) => {
+    touched();
     setZoom((z) => clampZoom(z * f));
-    if (edit && !center) setCenter([(edit.draft.minLat + edit.draft.maxLat) / 2, (edit.draft.minLon + edit.draft.maxLon) / 2]);
+    if (edit && !center) setCenter(edit.draft ? [(edit.draft.minLat + edit.draft.maxLat) / 2, (edit.draft.minLon + edit.draft.maxLon) / 2] : edit.at);
   };
   // placing starts from the whole site image (or the whole trail); zoom in to put the box exactly on the line
-  const startEdit = (b: Box) => (setEdit({ draft: b }), setZoom(1), setCenter(undefined));
+  const startEdit = (at: LatLon, draft?: Box) => (setEdit({ at, draft, fresh: !draft }), setZoom(1), setCenter(undefined));
   const done = async () => {
-    const b = edit!.draft;
+    const b = edit?.draft;
+    if (!b) return;
     setEdit(undefined);
     const r = await saveLapBox(key, b);
     setNote(r?.ok ? "box sent to car" : `box saved · not sent to car (${r?.reason}): this page times the laps for now`);
@@ -184,15 +198,15 @@ export function GpsFull({ s }: TileBodyProps) {
           <h4>set up a lap box?</h4>
           <p>Drop a box across the start/finish: each time the car drives into it, a new lap starts.</p>
           <div className="tv2-band-buttons">
-            <button type="button" className="tv2-band-btn primary" disabled={!dropAt} onClick={() => dropAt && startEdit(boxAround(dropAt))}>set up</button>
+            <button type="button" className="tv2-band-btn primary" disabled={!dropAt} onClick={() => dropAt && startEdit(dropAt)}>set up</button>
             <button type="button" className="tv2-band-btn" onClick={() => setPromptDismissed({ ...dismissed, [key]: true })}>not now</button>
           </div>
         </div>
       )}
       <div className="tv2-gps-stage">
-        <TrackMap s={s} size="full" keep={shown ? corners(shown) : []} hold={!!edit || zoom > 1 || !!center} frameSite={!!edit} followCar={!edit} zoom={zoom} center={center} onPan={setCenter}
-          onZoom={(z, c) => (setZoom(z), setCenter(c))}>
-          {(v) => shown && <LapBox v={v} box={shown} onChange={edit ? (d) => setEdit({ draft: d }) : undefined} />}
+        <TrackMap s={s} size="full" keep={shown ? corners(shown) : []} hold={!!edit || zoom > 1 || !!center} frameSite={!!edit} followCar={!edit} zoom={zoom} center={center} onPan={(c) => (touched(), setCenter(c))}
+          onZoom={(z, c) => (touched(), setZoom(z), setCenter(c))}>
+          {(v) => ((viewK.current = v.k), shown && <LapBox v={v} box={shown} onChange={edit ? (d) => setEdit({ ...edit, draft: d, fresh: false }) : undefined} />)}
         </TrackMap>
         <div className="tv2-gps-head">
           <div className="tv2-gps-title">GPS · {site?.name ?? "no map"}</div>
@@ -217,17 +231,17 @@ export function GpsFull({ s }: TileBodyProps) {
         {edit ? (
           <>
             <AppButton glyph="check" label="done" primary onClick={done} />
-            {/* back onto the car at the default size, with the view on it at the current zoom */}
-            <AppButton glyph="reset" label="reset" disabled={!car} onClick={() => car && (setEdit({ draft: boxAround(car) }), setCenter(car))} />
+            {/* back onto the car, sized for the current zoom, with the view on it */}
+            <AppButton glyph="reset" label="reset" disabled={!car} onClick={() => car && (setEdit({ at: car, fresh: true }), setCenter(car))} />
             <AppButton glyph="delete" label="cancel" onClick={() => setEdit(undefined)} />
           </>
         ) : box ? (
           <>
-            <AppButton glyph="edit" label="edit box" onClick={() => startEdit(box)} />
+            <AppButton glyph="edit" label="edit box" onClick={() => startEdit([(box.minLat + box.maxLat) / 2, (box.minLon + box.maxLon) / 2], box)} />
             <AppButton glyph="delete" label="clear box" onClick={() => saveLapBox(key, undefined)} />
           </>
         ) : (
-          <AppButton glyph="lapBox" label="lap box" disabled={!dropAt} onClick={() => dropAt && startEdit(boxAround(dropAt))} />
+          <AppButton glyph="lapBox" label="lap box" disabled={!dropAt} onClick={() => dropAt && startEdit(dropAt)} />
         )}
       </div>
     </div>

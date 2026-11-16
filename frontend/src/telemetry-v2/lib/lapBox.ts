@@ -9,11 +9,14 @@ import type { LatLon, Stream } from "./stream.ts";
 export type Box = { minLat: number; maxLat: number; minLon: number; maxLon: number };
 
 /** A box `w` × `h` metres centered on `at`. */
-export function boxAround([lat, lon]: LatLon, w = LAPS.boxSizeM.width, h = LAPS.boxSizeM.height): Box {
+export function boxAround([lat, lon]: LatLon, w: number, h: number): Box {
   const dLat = h / 2 / M_PER_DEG_LAT;
   const dLon = w / 2 / mPerDegLon(lat);
   return { minLat: lat - dLat, maxLat: lat + dLat, minLon: lon - dLon, maxLon: lon + dLon };
 }
+
+/** The box's size in metres, east-west × north-south. */
+export const boxSizeM = (b: Box): [number, number] => [(b.maxLon - b.minLon) * mPerDegLon((b.minLat + b.maxLat) / 2), (b.maxLat - b.minLat) * M_PER_DEG_LAT];
 
 /** The same box with min ≤ max (after dragging a corner past the opposite one). */
 export const normalized = (b: Box): Box => ({

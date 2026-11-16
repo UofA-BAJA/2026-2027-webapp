@@ -1,20 +1,20 @@
 // Self-check for lapBox.ts. Run from frontend/: node --experimental-strip-types src/telemetry-v2/lib/lapBox.check.ts
 import assert from "node:assert/strict";
-import { LAPS } from "../config/laps.ts";
-import { boxAround, detectLap, lapStats, normalized } from "./lapBox.ts";
+import { boxAround, boxSizeM, detectLap, lapStats, normalized } from "./lapBox.ts";
 import { runCsv, type LatLon, type Stream } from "./stream.ts";
 
 const newStream = () => ({ latest: {}, history: {}, at: {} }) as unknown as Stream;
 const near = (a: number | undefined, b: number, tol: number, msg: string) => assert.ok(a !== undefined && Math.abs(a - b) <= tol, `${msg}: ${a} vs ${b}`);
 
-// a 100 m circle at 10 Hz; the default box sits across it at angle 0 (the east side)
+// a 100 m circle at 10 Hz; a 20 × 20 m box sits across it at angle 0 (the east side)
 const R = 100;
 const at = (th: number, r = R): LatLon => [32 + (r * Math.sin(th)) / 110540, -111 + (r * Math.cos(th)) / (111320 * Math.cos((32 * Math.PI) / 180))];
-const box = boxAround(at(0));
+const box = boxAround(at(0), 20, 20);
 
-const half = LAPS.boxSizeM.height / 2;
-// boxAround: the configured size
-near((box.maxLat - box.minLat) * 110540, LAPS.boxSizeM.height, 0.01, "box height");
+const half = 10;
+// boxAround / boxSizeM: 20 m each way
+near(boxSizeM(box)[0], 20, 0.01, "box width");
+near(boxSizeM(box)[1], 20, 0.01, "box height");
 
 // three passes = three laps, 60 s apart; the lap starts where the car crosses the box edge, between fixes
 const s = newStream();
