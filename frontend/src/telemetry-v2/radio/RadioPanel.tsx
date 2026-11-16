@@ -1,9 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
-import { Link } from "react-router-dom";
 import { COMMANDS, DEFAULT_DATA_TYPES, ESTOP_HOLD_MS, FREQ_DEFAULT, FREQ_MAX, FREQ_MIN, FREQ_STEP } from "../config/radio";
 import { GRID, RADIO_PANEL_WIDTH } from "../config/theme";
 import { clock, mss } from "../lib/format";
-import type { Stream } from "../lib/stream";
+import { runCsv, type Stream } from "../lib/stream";
 import CommandButton from "./CommandButton";
 import DataTypePicker from "./DataTypePicker";
 import { sendCommand } from "./sendCommand";
@@ -11,6 +10,14 @@ import { sendCommand } from "./sendCommand";
 type Props = { s: Stream; live: boolean; dbm: string; perSec: number; trigger: RefObject<HTMLButtonElement | null>; open: boolean; onClose: () => void };
 
 // The radio panel hanging from the signal readout. Every send goes through sendCommand() and shows "sending…", then its result.
+function downloadCsv(s: Stream) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([runCsv(s)], { type: "text/csv" }));
+  a.download = `run-${new Date(s.startedAt).toISOString().slice(0, 16).replace(/[T:]/g, "-")}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 export default function RadioPanel({ s, live, dbm, perSec, trigger, open, onClose }: Props) {
   const [tenths, setTenths] = useState(Math.round(FREQ_DEFAULT * 10)); // MHz × 10, so 0.1 steps never drift
   const [types, setTypes] = useState<number[]>(DEFAULT_DATA_TYPES);
@@ -159,7 +166,8 @@ export default function RadioPanel({ s, live, dbm, perSec, trigger, open, onClos
 
       <section>
         <h3>logs</h3>
-        <Link className="tv2-rp-btn" to="/convert">export csv ↓</Link>
+        {/* the whole run so far, laps included (the "lap" series) */}
+        <button className="tv2-rp-btn" onClick={() => downloadCsv(s)}>export csv ↓</button>
       </section>
 
       {confirmEnd && (

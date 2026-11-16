@@ -4,6 +4,7 @@ import "react-grid-layout/css/styles.css";
 import { GRID } from "../config/theme";
 import { SIZES, colsFor, dropOrder, pack, sizeIndex, type PlacedTile } from "../lib/layout";
 import type { Stream } from "../lib/stream";
+import { TILE_TYPES } from "../tiles/registry";
 import TileView from "../tiles/TileView";
 import type { TileActions } from "../tiles/types";
 import AddSlot from "./AddSlot";
@@ -37,7 +38,13 @@ export default function TileGrid({ presetName, tiles, setTiles, customizing, s, 
     setJustAdded(t.id);
   };
   const update = (id: string, f: (t: PlacedTile) => PlacedTile) => setTiles(tiles.map((t) => (t.id === id ? f(t) : t)));
-  const resize = (id: string) => update(id, (t) => ({ ...t, ...SIZES[(sizeIndex(t) + 1) % SIZES.length] }));
+  // the next size this tile's type has (the GPS map has no large)
+  const resize = (id: string) =>
+    update(id, (t) => {
+      const sizes = TILE_TYPES[t.kind].sizes;
+      const next = sizes[(sizes.indexOf(SIZES[sizeIndex(t)].name) + 1) % sizes.length];
+      return { ...t, ...SIZES.find((x) => x.name === next)! };
+    });
   // the drop cell comes from where the tile was let go (RGL's own item is already compacted)
   const onDragStop = (_l: Layout, _old: unknown, item: { i: string } | null, _p: unknown, _e: unknown, el: HTMLElement | null) => {
     const moved = tiles.find((t) => t.id === item?.i);

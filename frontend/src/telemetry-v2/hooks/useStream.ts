@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { STREAM_URL } from "../config/radio";
-import type { Stream } from "../lib/stream";
+import { detectLap } from "../lib/lapBox";
+import type { LatLon, Stream } from "../lib/stream";
+import { getLapBoxes } from "./useLapBox";
+import { getSiteChoice, siteFor, siteKey } from "./useSite";
 
 // One SSE connection for the whole page; re-renders at 10 Hz.
 export function useStream() {
@@ -22,6 +25,11 @@ export function useStream() {
         s.at[k] = s.lastAt;
         // shortcut: whole run kept in memory; downsample or cap if runs get long
         (s.history[k] ??= []).push([p.ts, v]);
+      }
+      // laps: the web app's own detection from the lap box, until the car reports them (lib/lapBox.ts)
+      if (typeof p.gps_latitude === "number" && typeof p.gps_longitude === "number") {
+        const ll: LatLon = [p.gps_latitude, p.gps_longitude];
+        detectLap(s, p.ts, ll, getLapBoxes()[siteKey(siteFor(getSiteChoice(), ll))]);
       }
     };
     const id = setInterval(() => setTick((t) => t + 1), 100);

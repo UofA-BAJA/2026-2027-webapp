@@ -35,6 +35,11 @@
   --map-casing: rgba(0, 0, 0, 0.7); /* dark edge around map lines so they read on any satellite photo */
   --map-imagery: brightness(0.55) saturate(0.7); /* the site image (maps/) dimmed under the trail and the car */
   --map-empty: #000000; /* map background with no site image, and outside the image */
+  --lap-box: #ab0520; /* the lap box's slashes and its corner handles */
+  --lap-label: #d23a52; /* the small "lap" label on a set box */
+  --band-bg: #000000; /* the message band ("set up a lap box?") */
+  --on-band: #ffffff;
+  --on-band-soft: #bdbdbd;
   --map-car: #ab0520; /* the car dot (Arizona Red is its identity here, not an alarm); its ring is --tile */
 
   /* ---- header (the same in both themes) ---- */
@@ -84,11 +89,15 @@
   --fs-command: 15px;
   --fs-command-code: 10px;
   --fs-estop: 16px;
+  --fs-lap-value: 36px; /* the lap time on the medium GPS tile, so the map keeps most of it */
+  --fs-lap-time: 64px; /* the lap time in fullscreen GPS */
+  --fs-band-title: 24px; /* "set up a lap box?" */
   --fs-page-subtitle: 56px; /* Metro page header: "settings" under the small caps "GPS" */
   --fs-settings-option: 24px; /* tile settings panel: mode and background options, then tracks and actions */
   --fs-settings-action: 20px;
 
   /* ---- spacing and sizes ---- */
+  --appbar-h: 66px; /* fullscreen GPS app bar */
   --header-h: 92px; /* the radio panel and the fullscreen overlay sit just under it */
   --tile-pad: 14px;
   --radius: 3px;

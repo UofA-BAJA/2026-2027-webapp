@@ -111,7 +111,7 @@ export const CHANNELS = {
     pick: "imu_rotation_x",
   },
   // the GPS map (tiles/GpsTile.tsx)
-  track: { label: "track", system: "GPS", unit: "", source: "GPS_POSITION", keys: ["gps_longitude", "gps_latitude"], decimals: 0, axis: { auto: true } },
+  track: { label: "gps", system: "GPS", unit: "", source: "GPS_POSITION", keys: ["gps_longitude", "gps_latitude"], decimals: 0, axis: { auto: true } },
   // the same three GPS series the original /telemetry page charts; 6 decimals ≈ 0.1 m, so movement shows
   latitude: { label: "latitude", system: "GPS", unit: "°", source: "GPS_POSITION", keys: ["gps_latitude"], decimals: 6, axis: { auto: true } },
   longitude: { label: "longitude", system: "GPS", unit: "°", source: "GPS_POSITION", keys: ["gps_longitude"], decimals: 6, axis: { auto: true } },

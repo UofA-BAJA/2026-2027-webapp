@@ -5,7 +5,7 @@ import type { ChannelId } from "./channels.ts";
 
 export type PresetTile = {
   channel: ChannelId | ChannelId[]; // one channel, or two for one chart with a y axis each
-  size: "small" | "medium" | "large"; // small = number, medium = number + chart, large = chart ("track": map + lap time, + splits, + every lap)
+  size: "small" | "medium" | "large"; // small = number, medium = number + chart, large = chart ("track", the GPS map: small or medium)
   pick?: string; // multi-key channels: which number to show ("avg", "max" or one key); default from channels.ts
 };
 
@@ -68,7 +68,7 @@ export const PRESETS: Preset[] = [
   {
     name: "gps",
     tiles: [
-      { channel: "track", size: "large" },
+      { channel: "track", size: "medium" },
       { channel: "latitude", size: "medium" },
       { channel: "longitude", size: "medium" },
       { channel: "altitude", size: "medium" },

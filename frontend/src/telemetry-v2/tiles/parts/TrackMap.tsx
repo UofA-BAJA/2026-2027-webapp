@@ -8,6 +8,7 @@ import { gpsIndexAt, gpsTrace, type LatLon, type Stream } from "../../lib/stream
 // The GPS map, one SVG in screen pixels: the site's image (maps/, or black), the trail the car left, and the car.
 // No tiles and no internet: lat/lon are scaled into the image's corner bounds (flat-earth, fine for a site a few km
 // across). The view fits the trail and the car, or `fitTo` when given (the lap box editor holds it still).
+// zoom > 1 zooms in on the car and follows it (on the middle of `fitTo` while that's given).
 
 const CAR = { small: { r: 4, ring: 2 }, medium: { r: 5, ring: 2 }, full: { r: 7, ring: 3 } }; // px
 const TRAIL_POINTS = 1500; // most trail points drawn; a longer trail is thinned (every nth fix)
@@ -21,9 +22,10 @@ type Props = {
   keep?: LatLon[]; // more points to keep in view (the lap box)
   fitTo?: LatLon[]; // frame these instead of the trail
   children?: (v: MapView) => ReactNode; // drawn over the trail, under the car
+  zoom?: number; // 1 = everything fits
 };
 
-export function TrackMap({ s, size, keep = [], fitTo, children }: Props) {
+export function TrackMap({ s, size, keep = [], fitTo, children, zoom = 1 }: Props) {
   const [box, setBox] = useState({ w: 0, h: 0 });
   const ref = useResize((w, h) => setBox({ w, h }));
   const trailSecs = TRAILS.find((t) => t.id === useTrail())!.seconds;
@@ -38,6 +40,12 @@ export function TrackMap({ s, size, keep = [], fitTo, children }: Props) {
   const framed = fitTo ?? [...trail, ...(car ? [car] : []), ...keep];
   const pts: M[] = (framed.length ? framed : site ? [site.topLeft, site.bottomRight] : []).map(proj.toM);
   const v = fitView(pts, box.w, box.h);
+  if (zoom > 1) {
+    const [cx, cy] = !fitTo && car ? proj.toM(car) : [v.x0 + box.w / 2 / v.k, v.y0 + box.h / 2 / v.k];
+    v.k *= zoom;
+    v.x0 = cx - box.w / 2 / v.k;
+    v.y0 = cy - box.h / 2 / v.k;
+  }
   const view: MapView = {
     px: (p) => {
       const [x, y] = proj.toM(p);

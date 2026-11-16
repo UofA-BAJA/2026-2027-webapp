@@ -28,6 +28,9 @@ export const COMMANDS = {
   DISABLE_CHECK_ENGINE: 70, // check engine light on the dash off
   START_CAM: 105, // testing
   ACCELERATION: 106, // testing
+  // TODO(Karsten): placeholder ID, not in the firmware yet; add SET_LAP_BOX to Commands.h and copy its value here.
+  // payload: the lap box { minLat, maxLat, minLon, maxLon } (lib/lapBox.ts)
+  SET_LAP_BOX: 200,
 } as const;
 
 // firmware DataType enum (DataTypes.h). code = the type's bit in the live-data mask; name = shown in the panel.

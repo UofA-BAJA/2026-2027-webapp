@@ -8,7 +8,7 @@ Most changes are **data changes in `config/`**. You shouldn't need to read compo
 
 | Folder | What's in it |
 |---|---|
-| `config/` | Data people change: `channels.ts` (every channel, its units, limits and ranges), `presets.ts` (the tile layouts), `radio.ts` (frequencies, data types, command IDs), `theme.ts` (chart colors and a few sizes code needs). No JSX, no logic. |
+| `config/` | Data people change: `channels.ts` (every channel, its units, limits and ranges), `presets.ts` (the tile layouts), `radio.ts` (frequencies, data types, command IDs), `theme.ts` (chart colors and a few sizes code needs), `laps.ts` (lap box default size, re-entry time). No JSX, no logic. |
 | `maps/` | One image per site for the GPS map, plus a `.json` with its corner bounds. See `maps/README.md`. |
 | `styles/` | `tokens.css` holds every color, font size and spacing value by role. The other stylesheets only use those names. |
 | `tiles/` | `registry.ts` (tile type → component per size), the tile bodies (`NumberTile`, `NumberChartTile`, `ChartTile`, `GpsTile`), `PickChannelTile`, `TileView` (works out the number, limits and "no data"), and `parts/` (`TileShell`, `LimitOutline`, `LimitBar`, `TileControls`, `Reading`, `RoundButton`; for the GPS tile `TrackMap` (the map: site image, trail, car), `GpsSettings` (the gear panel) and `PageHeader`). |
@@ -16,8 +16,8 @@ Most changes are **data changes in `config/`**. You shouldn't need to read compo
 | `header/` | `Header`, `Logo`, `Ridges`, `Pivot`, `StatusArea`, `ThemeIcon`, `EasterEgg`. |
 | `grid/` | `TileGrid` (packing, drag-to-reorder, fullscreen overlay) and `AddSlot`. |
 | `radio/` | `Radio` (the signal readout), `RadioPanel`, `CommandButton`, `DataTypePicker`, `sendCommand.ts`. |
-| `hooks/` | `useStream` (the live data), `useLayouts` (saved tile orders), `useResize`; GPS: `useSite` (the site images in `maps/`), `useTrail` (trail length, clear trail), and `persisted` (a small shared value saved in localStorage). |
-| `lib/` | Plain logic with self-checks: `limitState.ts`, `layout.ts` (sizes, packer, validation), `axisRange.ts`, `headerFit.ts`, `systems.ts`, `stream.ts`, `format.ts`, `geo.ts` (lat/lon ↔ metres, fitting the map, run distance and speed), `dataSummary.ts`, `storage.ts`. |
+| `hooks/` | `useStream` (the live data), `useLayouts` (saved tile orders), `useResize`; GPS: `useSite` (the site images in `maps/`), `useTrail` (trail length, clear trail), `useLapBox` (the lap box per site, sent to the car), and `persisted` (a small shared value saved in localStorage). |
+| `lib/` | Plain logic with self-checks: `limitState.ts`, `layout.ts` (sizes, packer, validation), `axisRange.ts`, `headerFit.ts`, `systems.ts`, `stream.ts`, `format.ts`, `geo.ts` (lat/lon ↔ metres, fitting the map, run distance and speed), `lapBox.ts` (lap detection from the lap box, lap times), `dataSummary.ts`, `storage.ts`. |
 | `TelemetryV2.tsx` | Only puts the pieces together and holds page-wide state. |
 
 ## Recipes
@@ -48,6 +48,16 @@ The grid fills tiles in order, left to right, top to bottom, at any window width
 ### Add a site map
 Drop an image and a small `.json` with its corner lat/lon in `maps/`. `maps/README.md` has the format and where to get free imagery.
 
+### Time laps (the lap box)
+The car only sends lat/lon. Open the GPS tile fullscreen: the first time at a site it asks **set up a lap box?** (**not now** is remembered per site), or tap **lap box** in the app bar.
+1. The box drops on the car, 20 × 20 m (`config/laps.ts`). Drag it across the start/finish, drag a corner to resize, then **done**.
+2. Every time the car drives into the box, a new lap starts. Entering again within 20 s doesn't count (`reentrySeconds`), so GPS wandering at the edge can't add laps.
+3. **edit box** / **clear box** change it later. The box is saved per site in this browser.
+
+**done** also sends the box to the car (`SET_LAP_BOX` in `config/radio.ts`, a placeholder ID until it's in the firmware's `Commands.h`). Until the car can report laps, this page detects them itself: `detectLap()` in `lib/lapBox.ts` is the one function to replace. Laps go into the run data as the `lap` series, so **export csv** in the radio panel includes them.
+
+Zoom the fullscreen map with the mouse wheel, a trackpad pinch, or the + − **fit** buttons. Zoomed in, it follows the car.
+
 ### Rename a preset or add a header control
 Just do it. The header measures the logo, the preset names and the controls, and picks the richest layout that fits (five names centered, three centered, three next to the logo, or only the active name). There are no breakpoints to update.
 
@@ -75,6 +85,7 @@ Or one at a time:
 node --experimental-strip-types src/telemetry-v2/lib/layout.check.ts      # packer, presets, limits, saved-layout validation
 node --experimental-strip-types src/telemetry-v2/lib/radio.check.ts       # radio config and sendCommand
 node --experimental-strip-types src/telemetry-v2/lib/geo.check.ts         # lat/lon ↔ metres, map fitting, run distance with GPS jitter
+node --experimental-strip-types src/telemetry-v2/lib/lapBox.check.ts      # 3 passes = 3 laps, edge jitter ≠ extra laps, laps in the CSV
 node --experimental-strip-types src/telemetry-v2/lib/axisRange.check.ts   # round ticks, grow/shrink of chart ranges
 node --experimental-strip-types src/telemetry-v2/lib/headerFit.check.ts   # which header layout fits
 ```

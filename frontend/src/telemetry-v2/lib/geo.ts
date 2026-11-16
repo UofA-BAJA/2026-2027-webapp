@@ -4,8 +4,8 @@ import type { LatLon, Stream } from "./stream.ts";
 
 export type M = [number, number]; // metres east (x) and south (y) of an origin, so y grows down like the screen
 
-const M_PER_DEG_LAT = 110540;
-const mPerDegLon = (lat: number) => 111320 * Math.cos((lat * Math.PI) / 180);
+export const M_PER_DEG_LAT = 110540;
+export const mPerDegLon = (lat: number) => 111320 * Math.cos((lat * Math.PI) / 180);
 
 /** Metres east/south of `origin` and back. Flat-earth: fine for a site a few km across. */
 export function projection(origin: LatLon) {

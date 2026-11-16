@@ -20,8 +20,10 @@ export default function TileView({ tile, s, range, delay, a }: { tile: Tile; s: 
   if (!ch) return <PickChannelTile tile={tile} a={a} delay={delay} />; // just added: no channel yet
 
   const type = TILE_TYPES[tile.kind];
-  const size = type.sizes.length === 1 ? type.sizes[0] : SIZES[sizeIndex(tile)].name;
-  const Body = type.views[size]!;
+  const want = SIZES[sizeIndex(tile)].name;
+  const size = type.sizes.includes(want) ? want : type.sizes[type.sizes.length - 1]; // a saved size the type no longer has
+  const own = a.full && type.full; // a type with its own fullscreen view
+  const Body = own || type.views[size]!;
   const r = reading(ch, tile.pick, s);
   // no data (a DATA problem, blue): none of the tile's keys arrived in the last 3 s
   const seen = Math.max(0, ...chs.flatMap((c) => c.keys.map((k) => s.at[k] ?? 0)));
@@ -35,7 +37,7 @@ export default function TileView({ tile, s, range, delay, a }: { tile: Tile; s: 
 
   return (
     <TileShell
-      tile={tile} a={a} size={size} chs={chs} readingLabel={tile.kind === "channel" ? r.label : ""} limit={limit} lim={lim} stale={stale} status={status} delay={delay}
+      tile={tile} a={a} size={size} chs={chs} readingLabel={type.label ? type.label(s, size) : tile.kind === "channel" ? r.label : ""} bare={!!own} limit={limit} lim={lim} stale={stale} status={status} delay={delay}
       onSettings={type.settings && (() => setSettingsOpen((o) => !o))}
       settings={type.settings && settingsOpen && !a.customizing && !a.full && <type.settings s={s} onClose={() => setSettingsOpen(false)} />}
     >

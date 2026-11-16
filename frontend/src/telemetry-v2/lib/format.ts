@@ -15,7 +15,11 @@ export const tsClockShort = (s: Stream, ts: number) => clockShort(tsMs(s, ts));
 // a duration as m:ss
 export const mss = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")}`;
 
-// a lap or split time, cut (not rounded) to tenths like a stopwatch: "36.4", "2:42.7"
+// distance and speed from metres and m/s: "8.4 mi", "31.2 mph"
+export const miles = (m: number) => `${(m / 1609.344).toFixed(1)} mi`;
+export const mph = (ms: number) => `${(ms * 2.236936).toFixed(1)} mph`;
+
+// a lap time, cut (not rounded) to tenths like a stopwatch: "36.4", "2:42.7"
 export const lapTime = (s: number) => {
   const t = Math.floor(s * 10);
   const m = Math.floor(t / 600);

@@ -5,7 +5,7 @@ export type SendResult = { ok: true } | { ok: false; reason: string };
 // Every pit → car send goes through here. It POSTs { id, payload } (ids from config/radio.ts) and always resolves
 // with an answer the panel shows; it never throws, so no button can silently do nothing.
 // No such endpoint exists yet (no route in backend/, no /api proxy in vite.config), so today every send is "not connected to car".
-export async function sendCommand(id: number, payload?: number | number[]): Promise<SendResult> {
+export async function sendCommand(id: number, payload?: number | number[] | Record<string, number>): Promise<SendResult> {
   try {
     const res = await fetch(RADIO_COMMAND_URL, {
       method: "POST",

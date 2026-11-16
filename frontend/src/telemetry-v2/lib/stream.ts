@@ -29,6 +29,13 @@ export function gpsTrace(s: Stream, from: number, to: number, max = 2000): LatLo
   return out;
 }
 
+/** The whole run as CSV, one row per value: ts, series, value. Lap starts are the "lap" series (lib/lapBox.ts). */
+export function runCsv(s: Stream) {
+  const rows = ["ts,series,value"];
+  for (const [k, pts] of Object.entries(s.history)) for (const [ts, v] of pts) rows.push(`${ts},${k},${v}`);
+  return rows.join("\n");
+}
+
 /** Index of the first GPS fix at or after stream time `ts` (binary search; fixes arrive in time order). */
 export function gpsIndexAt(s: Stream, ts: number) {
   const h = s.history.gps_latitude ?? [];

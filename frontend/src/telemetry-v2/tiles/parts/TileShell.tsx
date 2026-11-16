@@ -31,11 +31,12 @@ type Props = {
   children: ReactNode; // the tile body
   onSettings?: () => void; // tiles with settings: the gear toggles them
   settings?: ReactNode; // the open settings panel, drawn over the tile
+  bare?: boolean; // no label foot: a type's own fullscreen view lays out its whole tile
 };
 
 // Everything around a tile's body: outline meter, controls, the customize-mode number picker,
 // and the Windows Phone style foot (limit bar, then the label bottom-left under the number, status on the right).
-export default function TileShell({ tile, a, size, chs, readingLabel, limit, lim, stale, status, delay, children, onSettings, settings }: Props) {
+export default function TileShell({ tile, a, size, chs, readingLabel, limit, lim, stale, status, delay, children, onSettings, settings, bare }: Props) {
   const ch = chs[0];
   const state = lim && lim.state !== "ok" ? ` tv2-${lim.state}` : "";
   return (
@@ -53,7 +54,7 @@ export default function TileShell({ tile, a, size, chs, readingLabel, limit, lim
         </select>
       )}
       {children}
-      <div className="tv2-foot">
+      {!bare && <div className="tv2-foot">
         {limit && <LimitBar limit={limit} lim={lim} />}
         <div className="tv2-foot-row">
           <span className="tv2-label">
@@ -62,7 +63,7 @@ export default function TileShell({ tile, a, size, chs, readingLabel, limit, lim
           </span>
           {status && <span className={`tv2-status${lim && lim.meter >= 60 ? " strong" : ""}`}>{status}</span>}
         </div>
-      </div>
+      </div>}
     </div>
   );
 }
