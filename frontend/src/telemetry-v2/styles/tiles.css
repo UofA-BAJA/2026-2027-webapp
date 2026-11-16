@@ -108,7 +108,7 @@
 .tv2-lapbox-label { font-size: var(--fs-small); fill: var(--lap-label); }
 .tv2-lapbox.editing .tv2-lapbox-label { fill: var(--value); text-anchor: middle; }
 .tv2-lapbox.editing rect { cursor: move; }
-.tv2-lapbox-handle circle:last-child { fill: var(--lap-box); stroke: var(--on-alarm); stroke-width: 1.5; }
+.tv2-lapbox-handle circle:last-child { fill: var(--lap-box); stroke: var(--on-alarm); stroke-width: 2; }
 .tv2-lapbox-handle { cursor: nwse-resize; }
 .tv2-lapbox-handle:nth-of-type(2), .tv2-lapbox-handle:nth-of-type(3) { cursor: nesw-resize; }
 /* medium with a box: map over the lap time on the left, last / best / distance on the right */

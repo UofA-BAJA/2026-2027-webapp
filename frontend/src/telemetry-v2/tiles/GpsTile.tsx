@@ -36,7 +36,9 @@ export function gpsLabel(s: Stream, size: Size) {
 }
 
 type Corner = "nw" | "ne" | "sw" | "se";
-const HANDLES_FROM = 40; // px: smaller than this on screen, the box shows no corner handles
+const HANDLE_R = 10; // px: the red corner handles
+const GRAB_R = 26; // px: the invisible target around a handle (and around a box too small for handles): finger-sized
+const HANDLES_FROM = 2 * GRAB_R + 16; // px: smaller than this on screen, the box shows no corner handles (theirs would cover it)
 const HANDLE_INSET = 16; // px: a corner off screen (zoomed in past the box) keeps its handle this far inside the edge
 
 // The box: diagonal red slashes, no outline. The slashes are a pattern in screen pixels, so they stay 4 px apart at
@@ -98,12 +100,12 @@ function LapBox({ v, box, onChange }: { v: MapView; box: Box; onChange?: (b: Box
       </defs>
       <rect x={x0} y={y0} width={x1 - x0} height={y1 - y0} fill={`url(#${hatch})`} onPointerDown={edit ? grab("move") : undefined} />
       {/* a tiny box (zoomed out) gets a finger-sized invisible target, so it can still be picked up */}
-      {edit && !roomy && <circle cx={(x0 + x1) / 2} cy={(y0 + y1) / 2} r={18} fill="transparent" onPointerDown={grab("move")} />}
+      {edit && !roomy && <circle cx={(x0 + x1) / 2} cy={(y0 + y1) / 2} r={GRAB_R} fill="transparent" onPointerDown={grab("move")} />}
       <text className="tv2-lapbox-label" x={edit ? (x0 + x1) / 2 : x0} y={y0 - 8}>{edit ? "lap box" : "lap"}</text>
       {edit && roomy && handles.map(([c, x, y]) => (
         <g key={c} className="tv2-lapbox-handle" onPointerDown={grab(c)}>
-          <circle cx={x} cy={y} r={18} fill="transparent" />
-          <circle cx={x} cy={y} r={7} />
+          <circle cx={x} cy={y} r={GRAB_R} fill="transparent" />
+          <circle cx={x} cy={y} r={HANDLE_R} />
         </g>
       ))}
     </g>
