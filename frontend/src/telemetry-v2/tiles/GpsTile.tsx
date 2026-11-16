@@ -157,8 +157,8 @@ function AppButton({ glyph, label, onClick, primary, disabled }: AppButtonProps)
   );
 }
 
-// fullscreen: the map with the site name and run distance, zoom (wheel, pinch, or + − fit) and drag to pan, the lap readout, the "set up a lap box?" band the first
-// time per site, and the app bar that places, edits and clears the box
+// fullscreen: the map with the site name and run distance, zoom (wheel, pinch, or + − fit) and drag to pan, the lap
+// readout, the "set up a lap box?" band the first time per site, and the app bar that places, edits and clears the box
 export function GpsFull({ s }: TileBodyProps) {
   const { car, site, key, box } = useSiteBox(s);
   const dismissed = usePromptDismissed();
@@ -175,6 +175,7 @@ export function GpsFull({ s }: TileBodyProps) {
   });
   const touched = () => edit?.fresh && setEdit({ ...edit, fresh: false });
   const [note, setNote] = useState("");
+  const noteTimer = useRef(0); // a newer note restarts the 6 s
   const [zoom, setZoom] = useState(1);
   const [center, setCenter] = useState<LatLon>(); // set by dragging the map; fit lets go of it
   const dropAt = center ?? car; // a new box lands in the middle of the view once it's been dragged, else on the car
@@ -193,7 +194,8 @@ export function GpsFull({ s }: TileBodyProps) {
     setEdit(undefined);
     const r = await saveLapBox(key, b);
     setNote(r?.ok ? "box sent to car" : `box saved · not sent to car (${r?.reason}): this page times the laps for now`);
-    setTimeout(() => setNote(""), 6000);
+    clearTimeout(noteTimer.current);
+    noteTimer.current = window.setTimeout(() => setNote(""), 6000);
   };
   const { metres, speed } = runStats(s);
   const lap = lapStats(s);

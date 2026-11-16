@@ -38,11 +38,12 @@ type Props = {
 export function TrackMap({ s, size, keep = [], children, zoom = 1, hold, frameSite, followCar = true, center, onPan, onZoom }: Props) {
   const [box, setBox] = useState({ w: 0, h: 0 });
   const ref = useResize((w, h) => setBox({ w, h }));
-  const pan = useRef<{ x: number; y: number; toLL: MapView["toLL"] }>(undefined); // where a map drag started
+  const pan = useRef<{ x: number; y: number; toLL: MapView["toLL"]; k: number }>(undefined); // where a map drag started
+  const keepIn = useRef<(c: LatLon, k: number) => LatLon>((c) => c); // the latest "middle of the view inside the photo"
   const held = useRef<View & { w: number; h: number; site: boolean }>(undefined); // the fit kept while `hold`
   // the wheel listener is native (React's is passive, so it couldn't stop the page scrolling or the browser zooming on
   // a pinch); it reads the latest view from here
-  const live = useRef<{ toLL: MapView["toLL"]; w: number; h: number; zoom: number; onZoom?: Props["onZoom"] }>(undefined);
+  const live = useRef<{ toLL: MapView["toLL"]; w: number; h: number; k: number; zoom: number; onZoom?: Props["onZoom"] }>(undefined);
   useEffect(() => {
     const el = ref.current!;
     const wheel = (e: WheelEvent) => {
@@ -55,7 +56,7 @@ export function TrackMap({ s, size, keep = [], children, zoom = 1, hold, frameSi
       // keep the point under the pointer where it is: the middle moves toward it by 1 - 1/f
       const r = el.getBoundingClientRect();
       const [px, py] = [e.clientX - r.left, e.clientY - r.top];
-      l.onZoom(zoom, l.toLL([px + (l.w / 2 - px) / f, py + (l.h / 2 - py) / f]));
+      l.onZoom(zoom, keepIn.current(l.toLL([px + (l.w / 2 - px) / f, py + (l.h / 2 - py) / f]), l.k * f));
     };
     el.addEventListener("wheel", wheel, { passive: false });
     return () => el.removeEventListener("wheel", wheel);
@@ -81,10 +82,19 @@ export function TrackMap({ s, size, keep = [], children, zoom = 1, hold, frameSi
     v.x0 = cx - box.w / 2 / v.k;
     v.y0 = cy - box.h / 2 / v.k;
   }
+  // the photo always fills the map: never zoomed out past it, never past its edges (no black bars)
+  const [ix0, iy0] = site ? proj.toM(site.topLeft) : [0, 0];
+  const [ix1, iy1] = site ? proj.toM(site.bottomRight) : [0, 0];
+  const clamp = (a: number, lo: number, hi: number) => Math.min(Math.max(a, lo), hi);
+  // the middle of a view k px/m wide that stays inside the photo; dragging or zooming toward an edge stops there, so
+  // the stored middle never runs past it (dragging back would do nothing until it returned)
+  keepIn.current = (c, k) => {
+    if (!site) return c;
+    const [x, y] = proj.toM(c);
+    const [hw, hh] = [box.w / 2 / k, box.h / 2 / k];
+    return proj.toLL([hw * 2 >= ix1 - ix0 ? (ix0 + ix1) / 2 : clamp(x, ix0 + hw, ix1 - hw), hh * 2 >= iy1 - iy0 ? (iy0 + iy1) / 2 : clamp(y, iy0 + hh, iy1 - hh)]);
+  };
   if (site) {
-    // the photo always fills the map: never zoomed out past it, never past its edges (no black bars)
-    const [ix0, iy0] = proj.toM(site.topLeft);
-    const [ix1, iy1] = proj.toM(site.bottomRight);
     const cover = Math.max(box.w / (ix1 - ix0), box.h / (iy1 - iy0));
     if (v.k < cover) {
       const [cx, cy] = [v.x0 + box.w / 2 / v.k, v.y0 + box.h / 2 / v.k];
@@ -92,8 +102,8 @@ export function TrackMap({ s, size, keep = [], children, zoom = 1, hold, frameSi
       v.x0 = cx - box.w / 2 / v.k;
       v.y0 = cy - box.h / 2 / v.k;
     }
-    v.x0 = Math.min(Math.max(v.x0, ix0), ix1 - box.w / v.k);
-    v.y0 = Math.min(Math.max(v.y0, iy0), iy1 - box.h / v.k);
+    v.x0 = clamp(v.x0, ix0, ix1 - box.w / v.k);
+    v.y0 = clamp(v.y0, iy0, iy1 - box.h / v.k);
   }
   const view: MapView = {
     px: (p) => {
@@ -106,7 +116,7 @@ export function TrackMap({ s, size, keep = [], children, zoom = 1, hold, frameSi
     h: box.h,
     site,
   };
-  live.current = { toLL: view.toLL, w: box.w, h: box.h, zoom, onZoom };
+  live.current = { toLL: view.toLL, w: box.w, h: box.h, k: v.k, zoom, onZoom };
   const line = (ps: LatLon[]) => ps.map((p) => view.px(p).map((c) => c.toFixed(1)).join(",")).join(" ");
   // newest brightest: FADE_STEPS pieces sharing their end points, opacity rising toward the car
   const step = Math.max(1, Math.ceil(trail.length / FADE_STEPS));
@@ -124,11 +134,11 @@ export function TrackMap({ s, size, keep = [], children, zoom = 1, hold, frameSi
         onPointerDown={onPan && ((e) => {
           if (e.button !== 0) return;
           e.currentTarget.setPointerCapture(e.pointerId);
-          pan.current = { x: e.clientX, y: e.clientY, toLL: view.toLL };
+          pan.current = { x: e.clientX, y: e.clientY, toLL: view.toLL, k: v.k };
         })}
         onPointerMove={onPan && ((e) => {
           const p = pan.current;
-          if (p) onPan(p.toLL([box.w / 2 - (e.clientX - p.x), box.h / 2 - (e.clientY - p.y)]));
+          if (p) onPan(keepIn.current(p.toLL([box.w / 2 - (e.clientX - p.x), box.h / 2 - (e.clientY - p.y)]), p.k));
         })}
         onPointerUp={() => void (pan.current = undefined)}
         onPointerCancel={() => void (pan.current = undefined)}
