@@ -8,6 +8,7 @@ const GLYPHS = {
   lapBox: "M2 2h8v8H2zM2 6l4-4M2 10l8-8M6 10l4-4", // a hatched square
   edit: "M2 10l.8-2.6L8 2.2 9.8 4 4.6 9.2zM7 3.2 8.8 5", // a pencil
   check: "M2.2 6.4 4.8 9 9.8 3.2",
+  reset: "M3.2 4.2A3.6 3.6 0 1 1 2.4 6.6M3.2 1.6v2.6h2.6", // a circular arrow: back to the start
   gear: "M9.2 6a3.2 3.2 0 1 1-6.4 0a3.2 3.2 0 1 1 6.4 0M10.1 6h1.1M8.9 8.9l.78.78M6 10.1v1.1M3.1 8.9l-.78.78M1.9 6H.8M3.1 3.1l-.78-.78M6 1.9V.8M8.9 3.1l.78-.78",
 };
 

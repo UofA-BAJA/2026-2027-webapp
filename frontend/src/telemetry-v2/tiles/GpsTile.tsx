@@ -37,6 +37,7 @@ export function gpsLabel(s: Stream, size: Size) {
 
 type Corner = "nw" | "ne" | "sw" | "se";
 const HANDLES_FROM = 40; // px: smaller than this on screen, the box shows no corner handles
+const HANDLE_INSET = 16; // px: a corner off screen (zoomed in past the box) keeps its handle this far inside the edge
 
 // The box: diagonal red slashes, no outline. The slashes are a pattern in screen pixels, so they stay 4 px apart at
 // any zoom. Editing (onChange given) adds corner handles, the "lap box" label, and dragging: move, or resize from a
@@ -83,7 +84,11 @@ function LapBox({ v, box, onChange }: { v: MapView; box: Box; onChange?: (b: Box
   // corner handles only once the box is big enough on screen to grab them apart from the box itself; zoomed out
   // (placing starts from the whole site) any drag on it moves it
   const roomy = x1 - x0 >= HANDLES_FROM && y1 - y0 >= HANDLES_FROM;
-  const handles: [Corner, number, number][] = [["nw", x0, y0], ["ne", x1, y0], ["sw", x0, y1], ["se", x1, y1]];
+  // zoomed in past the box, its corners are off screen: their handles stay at the edge, and dragging one still moves
+  // that corner to the pointer
+  const inX = (x: number) => Math.min(v.w - HANDLE_INSET, Math.max(HANDLE_INSET, x));
+  const inY = (y: number) => Math.min(v.h - HANDLE_INSET, Math.max(HANDLE_INSET, y));
+  const handles: [Corner, number, number][] = [["nw", inX(x0), inY(y0)], ["ne", inX(x1), inY(y0)], ["sw", inX(x0), inY(y1)], ["se", inX(x1), inY(y1)]];
   return (
     <g className={`tv2-lapbox${edit ? " editing" : ""}`}>
       <defs>
@@ -151,6 +156,12 @@ export function GpsFull({ s }: TileBodyProps) {
   const [zoom, setZoom] = useState(1);
   const [center, setCenter] = useState<LatLon>(); // set by dragging the map; fit lets go of it
   const dropAt = center ?? car; // a new box lands in the middle of the view once it's been dragged, else on the car
+  // + and −: around the car, or around the box while placing it (the view starts on the whole site, so zooming its
+  // middle would push the box off screen)
+  const zoomBy = (f: number) => {
+    setZoom((z) => clampZoom(z * f));
+    if (edit && !center) setCenter([(edit.draft.minLat + edit.draft.maxLat) / 2, (edit.draft.minLon + edit.draft.maxLon) / 2]);
+  };
   // placing starts from the whole site image (or the whole trail); zoom in to put the box exactly on the line
   const startEdit = (b: Box) => (setEdit({ draft: b }), setZoom(1), setCenter(undefined));
   const done = async () => {
@@ -187,8 +198,8 @@ export function GpsFull({ s }: TileBodyProps) {
           {note && <div className="tv2-gps-note">{note}</div>}
         </div>
         <div className="tv2-gps-zoom">
-          <button type="button" aria-label="Zoom in" title="Zoom in" onClick={() => setZoom((z) => clampZoom(z * 1.6))}>+</button>
-          <button type="button" aria-label="Zoom out" title="Zoom out" disabled={zoom <= 1} onClick={() => setZoom((z) => clampZoom(z / 1.6))}>−</button>
+          <button type="button" aria-label="Zoom in" title="Zoom in" onClick={() => zoomBy(1.6)}>+</button>
+          <button type="button" aria-label="Zoom out" title="Zoom out" disabled={zoom <= 1} onClick={() => zoomBy(1 / 1.6)}>−</button>
           <button type="button" aria-label="Fit everything" title="Fit everything" disabled={zoom <= 1 && !center} onClick={() => (setZoom(1), setCenter(undefined))}>fit</button>
         </div>
         {edit && <div className="tv2-gps-hint">drag to move · drag a corner to resize · drop it across the start/finish</div>}
@@ -204,6 +215,8 @@ export function GpsFull({ s }: TileBodyProps) {
         {edit ? (
           <>
             <AppButton glyph="check" label="done" primary onClick={done} />
+            {/* back onto the car at the default size, with the view on it at the current zoom */}
+            <AppButton glyph="reset" label="reset" disabled={!car} onClick={() => car && (setEdit({ draft: boxAround(car) }), setCenter(car))} />
             <AppButton glyph="delete" label="cancel" onClick={() => setEdit(undefined)} />
           </>
         ) : box ? (

@@ -18,7 +18,7 @@ const FADE_STEPS = 12; // the trail is drawn in this many pieces, oldest faintes
 const ZOOM_MAX = 60; // × the fit-everything view: the whole site down to about 40 m across
 export const clampZoom = (z: number) => Math.min(ZOOM_MAX, Math.max(1, z));
 
-export type MapView = { px: (p: LatLon) => [number, number]; toLL: (px: [number, number]) => LatLon; k: number; site?: Site };
+export type MapView = { px: (p: LatLon) => [number, number]; toLL: (px: [number, number]) => LatLon; k: number; w: number; h: number; site?: Site };
 
 type Props = {
   s: Stream;
@@ -87,6 +87,8 @@ export function TrackMap({ s, size, keep = [], children, zoom = 1, hold, frameSi
     },
     toLL: ([x, y]) => proj.toLL([x / v.k + v.x0, y / v.k + v.y0]),
     k: v.k,
+    w: box.w,
+    h: box.h,
     site,
   };
   live.current = { toLL: view.toLL, w: box.w, h: box.h, zoom, onZoom };
